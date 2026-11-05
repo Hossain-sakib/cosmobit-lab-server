@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+uploads/*
+!uploads/.gitkeep
+coverage/
+*-debug.log
+*service-account*.json
