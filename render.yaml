@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: cosmobit-lab-server
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    disk:
+      name: community-uploads
+      mountPath: /app/uploads
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: FIREBASE_PROJECT_ID
+        value: project-811362785229
+      - key: MONGODB_URI
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/firebase-admin.json

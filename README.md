@@ -70,3 +70,24 @@ FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 npm test
 Set `NODE_ENV=production`, real MongoDB/Firebase configuration, and `CLIENT_URL` to the allowed frontend origin(s), comma-separated. Keep the Firebase emulator variable unset. Use HTTPS. Set `TRUST_PROXY` only to known proxy addresses/CIDRs when deploying behind a reverse proxy; never trust arbitrary forwarded headers. Uploads must use persistent storage mounted at `uploads/`. Images are limited to 5 MB and 20 megapixels, decoded and re-encoded as WebP with metadata removed. Other request bodies are limited to 128 KB. Rate limiting is in-process; a multi-instance deployment needs a shared limiter store. Firebase API, token verification, and MongoDB network destinations must be reachable through the hosting environment's supported network configuration.
 
 The server handles SIGINT/SIGTERM and closes database connections. The current validation uses local emulators, not production credentials. Package overrides update vulnerable transitive dependencies; re-run integration tests and `npm audit` when refreshing dependencies.
+
+## Container deployment
+
+Build from this repository with `docker build -t cosmobit-api .`. In managed cloud environments, supply the session CA with `--secret id=proxy_ca,src="$CODEX_PROXY_CERT"` and keep the platform proxy settings. The image installs only production dependencies and runs as a non-root user. No `.env` files, uploaded files, or credential files are copied into it.
+
+Provide `MONGODB_URI`, `FIREBASE_PROJECT_ID`, and `CLIENT_URL` as deployment environment configuration and use a supported runtime identity or securely mounted Firebase Admin credentials. The image accepts the platform's `PORT`. It refuses Firebase Auth emulation in production.
+
+The current image stores community uploads under `/app/uploads`. Mount persistent storage there on hosts that support persistent disks. Before using an ephemeral host such as Cloud Run, configure durable object storage or a supported persistent mount; deploying without it would lose uploaded images on restart. Deployment identity, billing/hosting selection, production database network access, and Firebase web configuration must be supplied before a production deployment can be verified.
+
+## Render
+
+Use `render.yaml` as a Blueprint for `Hossain-sakib/cosmobit-lab-server`. It defines a Docker web service, `/api/health` readiness, and a 1 GB persistent upload disk. The `starter` service and disk incur Render charges; review the current price before creating the service. Automatic deployment is disabled until production configuration is verified.
+
+Supply these settings securely:
+
+- `MONGODB_URI`: Atlas URI for database user `mskib567_db_user`, with its password and the selected database name. The cluster hostname and database name still need to be supplied. Give the user `readWrite` only for that application database and allow the Render service's outbound addresses in Atlas Network Access.
+- `CLIENT_URL`: final Netlify HTTPS origin.
+- `FIREBASE_PROJECT_ID`: `project-811362785229` (already set by the Blueprint).
+- A Render Secret File named `firebase-admin.json`, containing Firebase Admin credentials authorized for that project. The Blueprint points `GOOGLE_APPLICATION_CREDENTIALS` to `/etc/secrets/firebase-admin.json`. This file must be created securely in Render and must never be committed or placed in frontend variables.
+
+After the backend is healthy, configure the frontend's `VITE_API_URL` with its Render origin and deploy the Netlify build. Verify real sign-in, admin access, and upload persistence before calling the production deployment ready. API deployment requires authorized Render access; frontend deployment requires authorized Netlify access. Project IDs and MongoDB usernames alone do not grant that access.
