@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from './lib/rateLimit.js';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
 import authRouter from './routes/auth.js';
 import postsRouter from './routes/posts.js';
@@ -37,7 +36,7 @@ export function createApp() {
   app.use('/api/management', express.json({ limit: '2mb' }));
   app.use(express.json({ limit: '128kb' }));
   app.use('/uploads/private-applications', (req,res) => res.status(404).json({ message: 'Not found' }));
-  app.use('/uploads', express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), '../uploads'), { dotfiles: 'deny' }));
+  app.use('/uploads', express.static(path.resolve(process.env.UPLOADS_DIRECTORY || 'uploads'), { dotfiles: 'deny' }));
   app.get('/api/health', (req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ status: mongoose.connection.readyState === 1 ? 'ok' : 'unavailable', service: 'cosmobit-labs-api' }));
   app.use('/api/auth', authRouter);
   app.use('/api/posts', postsRouter);

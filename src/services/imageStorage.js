@@ -1,12 +1,11 @@
 import sharp from 'sharp';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { v2 as cloudinary } from 'cloudinary';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { fail } from '../lib/validation.js';
-const uploadsDir=path.join(path.dirname(fileURLToPath(import.meta.url)),'../../uploads');
+const uploadsDir=path.resolve(process.env.UPLOADS_DIRECTORY || 'uploads');
 const required=['CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET'];
 export function storageStatus(){const requested=process.env.IMAGE_STORAGE==='cloudinary'||(!process.env.IMAGE_STORAGE&&required.some(key=>process.env[key]));const missing=requested?required.filter(key=>!process.env[key]):[];return{provider:requested?'cloudinary':'local',configured:!missing.length,missing};}
 function cloudOptions(){const options={resource_type:'image',timeout:30000};if(process.env.HTTPS_PROXY)options.agent=new HttpsProxyAgent(process.env.HTTPS_PROXY);return options;}
