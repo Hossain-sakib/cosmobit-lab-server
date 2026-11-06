@@ -13,6 +13,12 @@ export async function handler(event, context) {
     return await serve(event, context);
   } catch (error) {
     console.error('API initialization failed:', error.name);
-    return { statusCode: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify({ message: 'The service is temporarily unavailable. Please try again.' }) };
+    const code = !process.env.MONGODB_URI ? 'DATABASE_NOT_CONFIGURED'
+      : error.code === 18 ? 'DATABASE_AUTHENTICATION_FAILED'
+      : ['MongoServerSelectionError','MongooseServerSelectionError'].includes(error.name) ? 'DATABASE_CONNECTION_UNAVAILABLE'
+      : error.code === 13 ? 'DATABASE_PERMISSION_DENIED'
+      : error.name === 'MongoParseError' ? 'DATABASE_CONFIGURATION_INVALID'
+      : 'SERVICE_UNAVAILABLE';
+    return { statusCode: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify({ status: 'unavailable', code, message: 'The service is temporarily unavailable. Please try again.' }) };
   }
 }
