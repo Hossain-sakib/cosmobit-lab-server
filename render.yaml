@@ -23,3 +23,13 @@ services:
         sync: false
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/firebase-admin.json
+      - key: IMAGE_STORAGE
+        value: cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: NOTIFICATION_EMAILS_ENABLED
+        value: "false"

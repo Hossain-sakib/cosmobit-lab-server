@@ -1,0 +1,5 @@
+import { Router } from 'express';
+import { can } from '../lib/permissions.js';
+import { recordScope, visibleRecord } from '../lib/managementScope.js';
+import { fail } from '../lib/validation.js';
+export function searchRouter(modules){const router=Router();router.get('/',async(req,res)=>{const q=req.query.q;if(typeof q!=='string'||q.trim().length<2||q.length>100)fail('Search using 2–100 characters.');const regex={$regex:q.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),$options:'i'};const results=[];for(const[path,config]of Object.entries(modules)){if(!can(req.user,`${config.permission}:view`))continue;const records=await config.Model.find({$and:[{archived:false,[config.title]:regex},await recordScope(req.user,config.permission)]}).select(config.title).limit(4).lean();for(const record of records)results.push({title:visibleRecord(record,req.user,config.permission)[config.title],module:config.displayTitle||path,path:`/studio/${path}/${record._id}`});}res.json({results:results.slice(0,60)});});return router;}

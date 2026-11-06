@@ -1,0 +1,50 @@
+[
+  {
+    "title": "Product design",
+    "slug": "product",
+    "summary": "Wireframes to polished interfaces that people enjoy using.",
+    "content": "User research and journey mapping\n\nWireframes and interactive prototypes\n\nDesign systems built for handoff",
+    "sortOrder": 0,
+    "status": "published"
+  },
+  {
+    "title": "Web engineering",
+    "slug": "web",
+    "summary": "Fast, accessible websites and web apps built on React and Node.",
+    "content": "Marketing sites and web applications\n\nAPI design and backend integration\n\nPerformance and accessibility audits",
+    "sortOrder": 1,
+    "status": "published"
+  },
+  {
+    "title": "Mobile apps",
+    "slug": "mobile",
+    "summary": "Native-feeling apps for iOS and Android from one codebase.",
+    "content": "React Native cross-platform builds\n\nApp Store and Play Store launch support\n\nOffline-first and push notification setup",
+    "sortOrder": 2,
+    "status": "published"
+  },
+  {
+    "title": "AI integrations",
+    "slug": "ai",
+    "summary": "Practical AI features that fit real workflows, not gimmicks.",
+    "content": "Chat, search, and automation features\n\nRetrieval-augmented generation pipelines\n\nModel evaluation and cost tuning",
+    "sortOrder": 3,
+    "status": "published"
+  },
+  {
+    "title": "Cloud & DevOps",
+    "slug": "cloud",
+    "summary": "Infrastructure that scales quietly in the background.",
+    "content": "CI/CD pipelines and deployment automation\n\nMonitoring, logging, and alerting\n\nCost optimization on AWS, GCP, or Azure",
+    "sortOrder": 4,
+    "status": "published"
+  },
+  {
+    "title": "Growth & SEO",
+    "slug": "seo",
+    "summary": "Technical foundations that help the right people find you.",
+    "content": "Technical SEO audits and fixes\n\nAnalytics and conversion tracking\n\nContent structure and site speed",
+    "sortOrder": 5,
+    "status": "published"
+  }
+]

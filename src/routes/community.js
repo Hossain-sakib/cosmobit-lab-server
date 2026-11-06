@@ -1,15 +1,10 @@
 import { Router } from 'express';
 import multer from 'multer';
-import sharp from 'sharp';
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { uploadImage, deleteImage } from '../services/imageStorage.js';
 import mongoose from 'mongoose';
 import CommunityPost from '../models/CommunityPost.js';
 import { requireAuth } from '../middleware/auth.js';
 import { text, fail } from '../lib/validation.js';
-const uploadsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../uploads');
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 1, fieldSize: 10000, parts: 2 } });
 function handleUpload(req, res, next) {
@@ -22,33 +17,22 @@ router.get('/posts', async (req, res) => res.json({ posts: await CommunityPost.f
 router.post('/posts', requireAuth, handleUpload, async (req, res) => {
   const content = text(req.body?.content ?? '', 'Content', { min: 0, max: 2000 });
   if (!content && !req.file) fail('Add some text or an image to post.');
-  let filename;
-  if (req.file) {
-    let image;
-    try {
-      const input = sharp(req.file.buffer, { limitInputPixels: 20000000, failOn: 'warning' });
-      const metadata = await input.metadata();
-      if (!['jpeg', 'png', 'gif', 'webp'].includes(metadata.format)) fail('Unsupported image.');
-      image = await input.rotate().resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
-    } catch { fail('Upload a valid JPEG, PNG, GIF, or WebP image up to 20 megapixels.'); }
-    filename = `${randomUUID()}.webp`;
-    await fs.mkdir(uploadsDir, { recursive: true });
-    await fs.writeFile(path.join(uploadsDir, filename), image, { flag: 'wx' });
-  }
+  const image = req.file ? await uploadImage(req.file.buffer,{folder:'community'}) : null;
   try {
-    const post = await CommunityPost.create({ authorId: req.user.id, authorUsername: req.user.username, authorDisplayName: req.user.displayName, content, imageUrl: filename ? `/uploads/${filename}` : null });
+    const post = await CommunityPost.create({ authorId:req.user.id, authorUsername:req.user.username, authorDisplayName:req.user.displayName, content, ...(image || {}) });
     res.status(201).json({ post });
   } catch (err) {
-    if (filename) await fs.unlink(path.join(uploadsDir, filename)).catch(() => {});
+    if(image)await deleteImage(image).catch(()=>{});
     throw err;
   }
 });
+
 router.delete('/posts/:id', requireAuth, async (req, res) => {
   const post = await CommunityPost.findById(req.params.id);
   if (!post) fail('Post not found.', 404);
-  if (String(post.authorId) !== req.user.id && req.user.role !== 'admin') fail('You can only delete your own posts.', 403);
+  if (String(post.authorId) !== req.user.id && !['admin','super_admin'].includes(req.user.role)) fail('You can only delete your own posts.', 403);
   await post.deleteOne();
-  if (post.imageUrl?.startsWith('/uploads/')) await fs.unlink(path.join(uploadsDir, path.basename(post.imageUrl))).catch(() => {});
+  await deleteImage(post).catch(()=>console.error('Image cleanup is pending.'));
   res.json({ message: 'Post deleted.' });
 });
 router.post('/posts/:id/like', requireAuth, async (req, res) => {
@@ -64,7 +48,7 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
   res.status(201).json({ comments: post.comments });
 });
 router.delete('/posts/:postId/comments/:commentId', requireAuth, async (req, res) => {
-  const match = { _id: req.params.commentId, ...(req.user.role !== 'admin' ? { authorId: req.user.id } : {}) };
+  const match = { _id: req.params.commentId, ...(!['admin','super_admin'].includes(req.user.role) ? { authorId: req.user.id } : {}) };
   const post = await CommunityPost.findOneAndUpdate({ _id: req.params.postId, comments: { $elemMatch: match } }, { $pull: { comments: { _id: req.params.commentId } } }, { new: true });
   if (!post) fail('Comment not found or not authorized.', 404);
   res.json({ comments: post.comments });

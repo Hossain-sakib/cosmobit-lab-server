@@ -16,6 +16,8 @@ const communityPostSchema = new mongoose.Schema(
     authorUsername: { type: String, required: true },
     authorDisplayName: { type: String, required: true },
     content: { type: String, trim: true, maxlength: 2000, default: "" },
+    imageStorage: { type: String, enum: ['local','cloudinary'], default: 'local' },
+    imagePublicId: { type: String, default: '' },
     imageUrl: { type: String, default: null },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     comments: [commentSchema],

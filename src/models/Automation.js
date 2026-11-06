@@ -1,0 +1,10 @@
+import mongoose from 'mongoose';
+const notificationSchema=new mongoose.Schema({userId:{type:mongoose.Schema.Types.ObjectId,required:true,index:true},eventKey:{type:String,required:true},title:{type:String,required:true,maxlength:300},message:{type:String,maxlength:5000},link:{type:String,maxlength:1000},readAt:{type:Date,default:null}},{timestamps:true});
+notificationSchema.index({userId:1,eventKey:1},{unique:true});
+export const Notification=mongoose.model('StudioNotification',notificationSchema);
+const emailJobSchema=new mongoose.Schema({eventKey:{type:String,required:true,unique:true},to:{type:String,required:true},subject:{type:String,required:true,maxlength:300},text:{type:String,maxlength:30000},documentType:String,documentId:mongoose.Schema.Types.ObjectId,documentVersion:Number,authorizationUserId:mongoose.Schema.Types.ObjectId,authorizationModule:String,authorizationRecordId:mongoose.Schema.Types.ObjectId,status:{type:String,enum:['queued','processing','sent','failed','waiting-configuration'],default:'queued'},attempts:{type:Number,default:0},nextAttemptAt:{type:Date,default:Date.now},claimedAt:Date,sentAt:Date,lastError:{type:String,maxlength:500},createdBy:mongoose.Schema.Types.ObjectId},{timestamps:true});
+emailJobSchema.index({status:1,nextAttemptAt:1});
+export const EmailJob=mongoose.model('StudioEmailJob',emailJobSchema);
+const shareSchema=new mongoose.Schema({tokenHash:{type:String,unique:true,required:true},documentType:{type:String,enum:['invoices','proposals'],required:true},documentId:{type:mongoose.Schema.Types.ObjectId,required:true},expiresAt:{type:Date,required:true},createdBy:{type:mongoose.Schema.Types.ObjectId,required:true},revokedAt:Date,documentVersion:Number,snapshot:mongoose.Schema.Types.Mixed},{timestamps:true});
+shareSchema.index({expiresAt:1},{expireAfterSeconds:0});
+export const DocumentShare=mongoose.model('StudioDocumentShare',shareSchema);

@@ -9,7 +9,7 @@ try {
   const identity = await firebaseAuth().getUser(uid);
   if (!identity.email || identity.disabled) throw new Error('An active Firebase user with email is required.');
   await connectDB();
-  const user = await User.findOneAndUpdate({ firebaseUid: uid }, { $set: { role: 'admin' } }, { new: true });
+  const user = await User.findOneAndUpdate({ firebaseUid: uid }, { $set: { role: process.argv.includes('--super') ? 'super_admin' : 'admin' } }, { new: true });
   if (!user) throw new Error('Sign in to the application once before granting admin.');
   console.log('Admin access granted.');
 } finally { await mongoose.disconnect(); }

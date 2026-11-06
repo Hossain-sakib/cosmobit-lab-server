@@ -6,6 +6,9 @@ import sharp from 'sharp';
 import fs from 'node:fs/promises';
 if (!process.env.FIREBASE_AUTH_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST.startsWith('127.0.0.1:')) throw new Error('Integration tests require the local Firebase Auth emulator.');
 process.env.FIREBASE_PROJECT_ID = 'demo-cosmobit';
+process.env.IMAGE_STORAGE = 'local';
+process.env.NODE_ENV = 'test';
+process.env.NOTIFICATION_EMAILS_ENABLED = 'false';
 process.env.CLIENT_URL = 'http://localhost:5173';
 const { createApp } = await import('../src/app.js');
 const { firebaseAuth } = await import('../src/lib/firebase.js');
@@ -13,12 +16,14 @@ const { default: User } = await import('../src/models/User.js');
 const { default: Post } = await import('../src/models/Post.js');
 const { default: WorkItem } = await import('../src/models/WorkItem.js');
 const { default: CommunityPost } = await import('../src/models/CommunityPost.js');
+const { ManagedProject, SpecialOrder, Product, ProductLead, Department, Employee, TeamTask, SalesActivity, DistributionHistory, CareerApplication } = await import('../src/models/Management.js');
 const uidList = [];
+const privateFiles = [];
 let uploaded;
 test('Firebase, API, CMS, community, and CRM integration', async t => {
   const db = `cosmobit_test_${randomUUID().replaceAll('-', '')}`;
   await mongoose.connect(`mongodb://127.0.0.1:27017/${db}`);
-  await Promise.all([User.init(), Post.init(), WorkItem.init(), CommunityPost.init()]);
+  await Promise.all([User, Post, WorkItem, CommunityPost, ManagedProject, SpecialOrder, Product, ProductLead, Department, Employee, TeamTask, SalesActivity, DistributionHistory, CareerApplication].map(Model => Model.init()));
   const server = createApp().listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api`;
@@ -120,6 +125,101 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       for (let i = 0; i < 4; i++) await req('/contact', { method: 'POST', body: { name: 'Test', email: 'test@example.com', message: 'Hello' } });
       assert.equal((await req('/contact', { method: 'POST', body: { name: 'Test', email: 'test@example.com', message: 'Hello' } })).status, 429);
     });
+    await t.test('separate projects and special orders, formulas, optimistic updates and import deduplication', async () => {
+      const created = await req('/management/projects', { token, method: 'POST', body: { projectName: 'Real delivery', account: 'Profile', clientName: 'Client', orderAmount: 100, bonusAmount: 20, feePercent: 20, orderDate: '2025-11-10', deliveryLastDate: '2025-11-20', orderedBy: 'Seller', developer: 'Operations', pages: [{ name: 'Home', status: 'Done' }, { name: 'About', status: 'Pending' }], salesAllocations: [{ person: 'Seller', percent: 60 }, { person: 'Partner', percent: 40 }] } });
+      assert.equal(created.status, 201); const project = created.data.record;
+      assert.equal(project.totalAfterFiverr, 96); assert.equal(project.pageProgress, 50); assert.equal(project.version, 0);
+      const special = await req('/management/special-orders', { token, method: 'POST', body: { profileName: 'Special', orderAmount: 500, orderStartDate: '2025-11-01', timelineDays: 10, review: 'Yes', secretReview: 'No' } });
+      assert.equal(special.status, 201); assert.equal(special.data.record.effectiveDeliveryDate, '2025-11-11');
+      assert.equal((await req(`/management/projects/${special.data.record._id}`, { token })).status, 404);
+      assert.equal((await req(`/management/special-orders/${project._id}`, { token })).status, 404);
+      const edit = await req(`/management/projects/${project._id}`, { token, method: 'PATCH', body: { version: 0, status: 'in-progress' } });
+      assert.equal(edit.status, 200); assert.equal(edit.data.record.version, 1);
+      assert.equal((await req(`/management/projects/${project._id}`, { token, method: 'PATCH', body: { version: 0, status: 'completed' } })).status, 409);
+      assert.equal((await req('/management/projects', { token, method: 'POST', body: { projectName: 'Bad allocation', salesAllocations: [{ person: 'A', percent: 70 }, { person: 'B', percent: 40 }] } })).status, 400);
+      const payload = { records: [{ name: 'Sample', url: 'https://example.com', medium: 'website', collectionType: 'work-sample', useStatus: 'unused' }] };
+      assert.equal((await req('/management/samples/bulk-import', { token, method: 'POST', body: payload })).data.imported, 1);
+      assert.equal((await req('/management/samples/bulk-import', { token, method: 'POST', body: payload })).data.duplicates, 1);
+      const sample = (await req('/management/samples', { token })).data.records[0];
+      assert.equal((await req(`/management/samples/${sample._id}`, { token, method: 'PATCH', body: { version: sample.version, useStatus: 'used', usedBy: 'Client' } })).status, 200);
+      assert.equal((await req('/management/samples?status=used', { token })).data.total, 1);
+    });
+    await t.test('role permissions, project assignment and financial redaction', async () => {
+      const developer = await signup();
+      await User.updateOne({ firebaseUid: developer.localId }, { $set: { role: 'developer' } });
+      const profile = await User.findOne({ firebaseUid: developer.localId });
+      const project = await req('/management/projects', { token, method: 'POST', body: { projectName: 'Assigned delivery', memberUserIds: [String(profile._id)], orderAmount: 1000 } });
+      const own = await req(`/management/projects/${project.data.record._id}`, { token: developer.idToken });
+      assert.equal(own.status, 200); assert.equal(own.data.record.orderAmount, undefined); assert.equal(own.data.record.totalAfterFiverr, undefined);
+      assert.equal((await req('/management/projects', { token: developer.idToken })).data.total, 1);
+      assert.equal((await req('/management/special-orders', { token: developer.idToken })).status, 403);
+      assert.equal((await req('/management/access', { token: developer.idToken })).status, 403);
+      assert.equal((await req('/management/applications', { token: developer.idToken })).status, 403);
+      assert.equal((await req(`/management/projects/${project.data.record._id}`, { token: developer.idToken, method: 'PATCH', body: { version: 0, projectName: 'No' } })).status, 403);
+      assert.equal((await req(`/management/access/${profile._id}`, { token, method: 'PATCH', body: { role: 'super_admin' } })).status, 403);
+      const deny = await req(`/management/access/${profile._id}`, { token, method: 'PATCH', body: { deniedPermissions: ['projects:view'] } });
+      assert.equal(deny.status, 200); assert.equal((await req('/management/projects', { token: developer.idToken })).status, 403);
+    });
+    await t.test('employee/department task scopes and limited self-service updates', async () => {
+      const worker = await signup(); const other = await signup();
+      const workerUser = await User.findOne({ firebaseUid: worker.localId }); const otherUser = await User.findOne({ firebaseUid: other.localId });
+      const department = (await req('/management/departments', { token, method: 'POST', body: { name: 'Engineering' } })).data.record;
+      const employee = (await req('/management/employees', { token, method: 'POST', body: { name: 'Worker', departmentId: department._id, accountUserId: String(workerUser._id) } })).data.record;
+      const outsider = (await req('/management/employees', { token, method: 'POST', body: { name: 'Other worker', departmentId: department._id, accountUserId: String(otherUser._id) } })).data.record;
+      const assigned = await req('/management/team-tasks', { token, method: 'POST', body: { title: 'Personal work', employeeId: employee._id } });
+      assert.equal(assigned.status, 201);
+      await req('/management/team-tasks', { token, method: 'POST', body: { title: 'Department work', departmentId: department._id } });
+      const privateTask = await req('/management/team-tasks', { token, method: 'POST', body: { title: 'Other personal work', employeeId: outsider._id } });
+      assert.equal((await req('/management/team-tasks', { token: worker.idToken })).data.total, 2);
+      assert.equal((await req(`/management/team-tasks/${privateTask.data.record._id}`, { token: worker.idToken })).status, 404);
+      assert.equal((await req(`/management/team-tasks/${assigned.data.record._id}`, { token: worker.idToken, method: 'PATCH', body: { version: 0, status: 'done', employeeComment: 'Finished' } })).status, 200);
+      assert.equal((await req(`/management/team-tasks/${assigned.data.record._id}`, { token: worker.idToken, method: 'PATCH', body: { version: 1, endDate: '2026-12-31' } })).status, 403);
+    });
+    await t.test('product lead isolation, employee ownership and per-product duplicates', async () => {
+      const salesperson = await signup(); const seller = await User.findOne({ firebaseUid: salesperson.localId });
+      await req('/management/employees', { token, method: 'POST', body: { name: 'Sales', accountUserId: String(seller._id) } });
+      await User.updateOne({ _id: seller._id }, { $set: { role: 'sales_executive' } });
+      const first = (await req('/management/products', { token, method: 'POST', body: { name: 'Product one' } })).data.record;
+      const second = (await req('/management/products', { token, method: 'POST', body: { name: 'Product two' } })).data.record;
+      const body = { clientName: 'Prospect', email: 'prospect@example.com', ownerUserId: String(seller._id) };
+      const lead = await req(`/management/products/${first._id}/leads`, { token, method: 'POST', body });
+      assert.equal(lead.status, 201);
+      assert.equal((await req(`/management/products/${first._id}/leads`, { token, method: 'POST', body })).status, 409);
+      assert.equal((await req(`/management/products/${second._id}/leads`, { token, method: 'POST', body })).status, 201);
+      assert.equal((await req(`/management/products/${second._id}/leads/${lead.data.record._id}`, { token })).status, 404);
+      assert.equal((await req(`/management/products/${first._id}/leads`, { token: salesperson.idToken })).data.total, 1);
+      await req(`/management/products/${first._id}/leads`, { token, method: 'POST', body: { clientName: 'Unassigned private lead', email: 'private@example.com' } });
+      assert.equal((await req(`/management/products/${first._id}/leads`, { token: salesperson.idToken })).data.total, 1);
+    });
+    await t.test('marketplace shift reports and revenue attribution reconcile without special-order revenue', async () => {
+      const daily = await req('/management/sales-activity', { token, method: 'POST', body: { date: '2025-11-10', platform: 'Fiverr', profile: 'Account', morningQuery: 10, morningQuote: 5, eveningQuery: 3, nightOrder: 2 } });
+      assert.equal(daily.status, 201);
+      const report = await req('/management/reports/marketplace?month=2025-11&platform=Fiverr', { token });
+      assert.equal(report.status, 200); assert.equal(report.data.totals.query, 13); assert.equal(report.data.totals.order, 2);
+      const distribution = await req('/management/reports/distribution?month=2025-11&platform=Fiverr', { token });
+      assert.equal(distribution.status, 200); assert.equal(distribution.data.totalNet, 96);
+      assert.equal(distribution.data.sales.reduce((n,r)=>Math.round(n*100)+Math.round(r.amount*100),0)>0,true);
+      assert.equal(distribution.data.sales.find(r=>r.person==='Seller').amount,57.6);
+      assert.equal(distribution.data.operations.find(r=>r.person==='Operations').amount,96);
+      await req('/management/distribution-history', { token, method: 'POST', body: { month: '2025-11', person: 'Historical seller', division: 'sales', platform: 'Fiverr', amount: 500, orders: 4 } });
+      const history = await req('/management/reports/distribution?month=2025-11&source=history', { token });
+      assert.equal(history.data.sales[0].amount,500); assert.equal(history.data.totalNet,0);
+    });
+    await t.test('career submission idempotency, private CVs, recruitment authorization and upload validation', async () => {
+      async function submit(key, fake=false) {
+        const form = new FormData(); for(const [k,v]of Object.entries({fullName:'Applicant',email:'applicant@example.com',phone:'12345',position:'Developer',consent:'true'}))form.append(k,v);
+        form.append('resume',new Blob([fake?'not PDF':'%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF'],{type:'application/pdf'}),'cv.pdf');
+        const response = await fetch(`${base}/applications`,{method:'POST',headers:{'X-Requested-With':'CosmoBit','Idempotency-Key':key},body:form});return response;
+      }
+      assert.equal((await submit(randomUUID(),true)).status,400);
+      const key=randomUUID();assert.equal((await submit(key)).status,201);assert.equal((await submit(key)).status,200);
+      const applications=await req('/management/applications',{token});assert.equal(applications.status,200);assert.equal(applications.data.total,1);
+      const application=applications.data.records[0];assert.equal(application.resumeFilename,undefined);assert.equal(application.resumeAvailable,true);
+      const stored=await CareerApplication.findById(application._id).select('+resumeFilename');privateFiles.push(stored.resumeFilename);
+      assert.equal((await fetch(`${base.replace('/api','')}/uploads/.private-applications/${stored.resumeFilename}`)).status,404);
+      assert.equal((await fetch(`${base}/applications/${application._id}/resume`)).status,401);
+      assert.equal((await fetch(`${base}/applications/${application._id}/resume`,{headers:{Authorization:`Bearer ${token}`}})).status,200);
+    });
     await t.test('role changes and Firebase-disabled users take effect immediately', async () => {
       await User.updateOne({ firebaseUid: admin.localId }, { $set: { role: 'user' } });
       assert.equal((await req('/crm/records', { token })).status, 403);
@@ -127,6 +227,7 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       assert.equal((await req('/auth/me', { token: regular.idToken })).status, 401);
     });
   } finally {
+    for (const filename of privateFiles) await fs.unlink(new URL(`../uploads/.private-applications/${filename}`, import.meta.url)).catch(() => {});
     if (uploaded) await fs.unlink(new URL(`..${uploaded}`, import.meta.url)).catch(() => {});
     await Promise.all(uidList.map(uid => firebaseAuth().deleteUser(uid)));
     await new Promise(resolve => server.close(resolve));

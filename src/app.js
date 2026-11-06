@@ -13,6 +13,10 @@ import newsletterRouter from './routes/newsletter.js';
 import adminRouter from './routes/admin.js';
 import communityRouter from './routes/community.js';
 import crmRouter from './routes/crm.js';
+import managementRouter from './routes/management.js';
+import websiteRouter from './routes/website.js';
+import { publicDocuments } from './routes/documentShares.js';
+import applicationsRouter from './routes/applications.js';
 export function createApp() {
   const app = express();
   const origins = (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(x => x.trim());
@@ -30,8 +34,10 @@ export function createApp() {
     } else if (!(req.method === 'DELETE' && !req.headers['content-length'] && !req.headers['transfer-encoding']) && !req.is('application/json')) return res.status(415).json({ message: 'Content-Type must be application/json.' });
     next();
   });
+  app.use('/api/management', express.json({ limit: '2mb' }));
   app.use(express.json({ limit: '128kb' }));
-  app.use('/uploads', express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), '../uploads')));
+  app.use('/uploads/private-applications', (req,res) => res.status(404).json({ message: 'Not found' }));
+  app.use('/uploads', express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), '../uploads'), { dotfiles: 'deny' }));
   app.get('/api/health', (req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ status: mongoose.connection.readyState === 1 ? 'ok' : 'unavailable', service: 'cosmobit-labs-api' }));
   app.use('/api/auth', authRouter);
   app.use('/api/posts', postsRouter);
@@ -41,6 +47,10 @@ export function createApp() {
   app.use('/api/admin', adminRouter);
   app.use('/api/community', communityRouter);
   app.use('/api/crm', crmRouter);
+  app.use('/api/management', managementRouter);
+  app.use('/api/applications', applicationsRouter);
+  app.use('/api/documents', publicDocuments);
+  app.use('/api', websiteRouter);
   app.use((req, res) => res.status(404).json({ message: 'Not found' }));
   app.use((err, req, res, next) => {
     if (res.headersSent) return next(err);
