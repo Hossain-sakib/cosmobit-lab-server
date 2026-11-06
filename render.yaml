@@ -16,7 +16,7 @@ services:
       - key: PORT
         value: 4000
       - key: FIREBASE_PROJECT_ID
-        value: project-811362785229
+        value: cosmobit-lab
       - key: MONGODB_URI
         sync: false
       - key: CLIENT_URL

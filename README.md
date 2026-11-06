@@ -87,7 +87,7 @@ Supply these settings securely:
 
 - `MONGODB_URI`: Atlas URI for database user `mskib567_db_user`, with its password and the selected database name. The cluster hostname and database name still need to be supplied. Give the user `readWrite` only for that application database and allow the Render service's outbound addresses in Atlas Network Access.
 - `CLIENT_URL`: final Netlify HTTPS origin.
-- `FIREBASE_PROJECT_ID`: `project-811362785229` (already set by the Blueprint).
+- `FIREBASE_PROJECT_ID`: `cosmobit-lab` (already set by the Blueprint).
 - A Render Secret File named `firebase-admin.json`, containing Firebase Admin credentials authorized for that project. The Blueprint points `GOOGLE_APPLICATION_CREDENTIALS` to `/etc/secrets/firebase-admin.json`. This file must be created securely in Render and must never be committed or placed in frontend variables.
 
 After the backend is healthy, configure the frontend's `VITE_API_URL` with its Render origin and deploy the Netlify build. Verify real sign-in, admin access, and upload persistence before calling the production deployment ready. API deployment requires authorized Render access; frontend deployment requires authorized Netlify access. Project IDs and MongoDB usernames alone do not grant that access.
