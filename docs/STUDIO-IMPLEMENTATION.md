@@ -1,6 +1,6 @@
 # Cosmobit Studio implementation audit and architecture
 
-The existing application uses React 18/Vite, Tailwind, Express 5, Firebase Authentication, and MongoDB/Mongoose. It has a public site, community, CMS, basic CRM, and Netlify/Render deployment files. Reuse this stack and existing brand assets. No framework migration or cloud environment publication is part of this change.
+The existing application uses React 18/Vite, Tailwind, Express 5, Firebase Authentication, and MongoDB/Mongoose. It has a public site, community, CMS, basic CRM, and Netlify deployment files. Reuse this stack and existing brand assets. The backend is adapted to Netlify Functions while retaining Express and the existing cloud environment configuration.
 
 The uploaded operating-system brief is the expanded product specification. Workbook requirements remain explicit: legitimate Special Orders are distinct from real Projects; product leads are scoped to individual products; work samples have Used/Unused state; tasks belong to employees/departments; marketplace activity includes three shifts; revenue distribution is separate from activity counts; career applications remain private. Workbooks may contain credentials and personal data: previews exclude hosting passwords, no real customer/applicant rows are committed as fixtures, and imports require confirmation.
 

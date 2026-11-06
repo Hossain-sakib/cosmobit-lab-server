@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { rateLimit } from 'express-rate-limit';
+import { rateLimit } from './lib/rateLimit.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
@@ -24,7 +24,7 @@ export function createApp() {
   app.disable('x-powered-by');
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: origins, credentials: true }));
-  app.use('/api', rateLimit({ windowMs: 60000, limit: 300, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Too many requests. Please try again later.' } }));
+  app.use('/api', rateLimit({ windowMs: 60000, limit: 300, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Too many requests. Please try again later.' } }, 'api'));
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
@@ -57,7 +57,7 @@ export function createApp() {
     if (err.code === 11000) return res.status(409).json({ message: 'That record already exists.' });
     if (err.name === 'CastError' || err.name === 'ValidationError') return res.status(400).json({ message: 'Invalid input.' });
     const status = err.status >= 400 && err.status < 500 ? err.status : 500;
-    if (status === 500) console.error('Request failed:', err.name);
+    if (status === 500) console.error('Request failed:', process.env.NODE_ENV === 'test' ? err.stack : err.name);
     res.status(status).json({ message: status === 500 ? 'Unexpected server error.' : err.message });
   });
   return app;

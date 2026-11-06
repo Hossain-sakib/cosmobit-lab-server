@@ -13,6 +13,7 @@
     "test:emulator": "npx --yes firebase-tools@15.35.0 emulators:exec --only auth --project demo-cosmobit \"npm test\""
   },
   "dependencies": {
+    "@netlify/functions": "^6.1.0",
     "cloudinary": "^2.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -26,6 +27,7 @@
     "multer": "^2.5.0",
     "nodemailer": "^10.3.1",
     "pdfkit": "^0.20.2",
+    "serverless-http": "^4.0.0",
     "sharp": "^0.35.5",
     "yauzl": "^3.4.0"
   },

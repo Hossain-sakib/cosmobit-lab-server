@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import mongoose from 'mongoose';
-import fs from 'node:fs/promises';
+import defaultServices from '../data/defaultServices.json' with { type: 'json' };
 import { randomUUID, createHash } from 'node:crypto';
 import { ManagedProject, SpecialOrder, Product, WorkSample, Department, Employee, TeamTask, SalesActivity, DistributionHistory, CareerApplication } from '../models/Management.js';
 import Job from '../models/Job.js';
@@ -121,7 +121,7 @@ async function syncEmployee(record, previous) {
   if (record.accountUserId) await User.updateOne({ _id: record.accountUserId, role: { $in: ['user','employee'] } }, { $set: { role: record.archived || record.status !== 'active' ? 'user' : 'employee' } });
 }
 router.post('/cms-services/bootstrap',requirePermission('cms:edit'),async(req,res)=>{
-  const records=JSON.parse(await fs.readFile(new URL('../data/defaultServices.json',import.meta.url),'utf8'));
+  const records=defaultServices;
   let created=0;
   for(const data of records){const existing=await businessModules['cms-services'].Model.exists({slug:data.slug});if(existing)continue;try{await businessModules['cms-services'].Model.create({...data,createdBy:req.user.id,updatedBy:req.user.id,history:[{at:new Date(),actor:req.user.id,action:'existing website service migrated',fields:Object.keys(data)}]});created++;}catch(err){if(err.code!==11000)throw err;}}
   res.json({created,message:'Existing website services migrated without overwriting records.'});

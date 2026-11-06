@@ -79,15 +79,6 @@ Provide `MONGODB_URI`, `FIREBASE_PROJECT_ID`, and `CLIENT_URL` as deployment env
 
 The current image stores community uploads under `/app/uploads`. Mount persistent storage there on hosts that support persistent disks. Before using an ephemeral host such as Cloud Run, configure durable object storage or a supported persistent mount; deploying without it would lose uploaded images on restart. Deployment identity, billing/hosting selection, production database network access, and Firebase web configuration must be supplied before a production deployment can be verified.
 
-## Render
+## Netlify
 
-Use `render.yaml` as a Blueprint for `Hossain-sakib/cosmobit-lab-server`. It defines a Docker web service, `/api/health` readiness, and a 1 GB persistent upload disk. The `starter` service and disk incur Render charges; review the current price before creating the service. Automatic deployment is disabled until production configuration is verified.
-
-Supply these settings securely:
-
-- `MONGODB_URI`: Atlas URI for database user `mskib567_db_user`, with its password and the selected database name. The cluster hostname and database name still need to be supplied. Give the user `readWrite` only for that application database and allow the Render service's outbound addresses in Atlas Network Access.
-- `CLIENT_URL`: final Netlify HTTPS origin.
-- `FIREBASE_PROJECT_ID`: `cosmobit-lab` (already set by the Blueprint).
-- A Render Secret File named `firebase-admin.json`, containing Firebase Admin credentials authorized for that project. The Blueprint points `GOOGLE_APPLICATION_CREDENTIALS` to `/etc/secrets/firebase-admin.json`. This file must be created securely in Render and must never be committed or placed in frontend variables.
-
-After the backend is healthy, configure the frontend's `VITE_API_URL` with its Render origin and deploy the Netlify build. Verify real sign-in, admin access, and upload persistence before calling the production deployment ready. API deployment requires authorized Render access; frontend deployment requires authorized Netlify access. Project IDs and MongoDB usernames alone do not grant that access.
+The frontend and backend deploy to a single Netlify site. See [the Netlify deployment guide](docs/NETLIFY.md) for functions, credentials, durable private uploads, schedules, and release instructions.

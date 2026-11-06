@@ -18,7 +18,6 @@ const { default: WorkItem } = await import('../src/models/WorkItem.js');
 const { default: CommunityPost } = await import('../src/models/CommunityPost.js');
 const { ManagedProject, SpecialOrder, Product, ProductLead, Department, Employee, TeamTask, SalesActivity, DistributionHistory, CareerApplication } = await import('../src/models/Management.js');
 const uidList = [];
-const privateFiles = [];
 let uploaded;
 test('Firebase, API, CMS, community, and CRM integration', async t => {
   const db = `cosmobit_test_${randomUUID().replaceAll('-', '')}`;
@@ -56,6 +55,27 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       assert.equal((await req('/contact', { method: 'POST', body: {}, headers: { Origin: 'https://evil.example' } })).status, 403);
       const malformed = await fetch(`${base}/contact`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' });
       assert.equal(malformed.status, 400);
+    });
+    await t.test('Netlify adapter routes direct and rewritten API requests', async () => {
+      const { handler } = await import('../netlify/functions/api.mjs');
+      for (const path of ['/api/health','/.netlify/functions/api/api/health']) {
+        const response = await handler({ path, httpMethod:'GET', headers:{}, body:null }, {});
+        assert.equal(response.statusCode,200);
+        assert.equal(JSON.parse(response.body).status,'ok');
+      }
+      const response = await handler({ path:'/api/management/summary', httpMethod:'GET', headers:{}, body:null }, {});
+      assert.equal(response.statusCode,401);
+    });
+    await t.test('shared function rate counters reconcile concurrent instances and reset expired windows', async () => {
+      const { MongoRateLimitStore } = await import('../src/lib/rateLimit.js');
+      const one = new MongoRateLimitStore('test'), two = new MongoRateLimitStore('test');
+      one.init({windowMs:60000});two.init({windowMs:60000});
+      await Promise.all(Array.from({length:20},(_,index)=>(index%2?one:two).increment('client')));
+      assert.equal((await one.increment('client')).totalHits,21);
+      assert.equal((await new MongoRateLimitStore('another').collection().findOne({_id:one.key('client')})).totalHits,21);
+      await one.collection().updateOne({_id:one.key('client')},{$set:{resetTime:new Date(0)}});
+      assert.equal((await two.increment('client')).totalHits,1);
+      await one.resetKey('client');
     });
     let draft;
     await t.test('draft privacy, slug collisions, safe update fields and async errors', async () => {
@@ -215,10 +235,18 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       const key=randomUUID();assert.equal((await submit(key)).status,201);assert.equal((await submit(key)).status,200);
       const applications=await req('/management/applications',{token});assert.equal(applications.status,200);assert.equal(applications.data.total,1);
       const application=applications.data.records[0];assert.equal(application.resumeFilename,undefined);assert.equal(application.resumeAvailable,true);
-      const stored=await CareerApplication.findById(application._id).select('+resumeFilename');privateFiles.push(stored.resumeFilename);
-      assert.equal((await fetch(`${base.replace('/api','')}/uploads/.private-applications/${stored.resumeFilename}`)).status,404);
+      const stored=await CareerApplication.findById(application._id).select('+resumeFileId');
+      assert.ok(stored.resumeFileId);
+      assert.equal(application.resumeFileId,undefined);
+      const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: 'privateResumes' });
+      assert.equal(await mongoose.connection.db.collection('privateResumes.files').countDocuments({}),1);
+      assert.equal((await fetch(`${base.replace('/api','')}/uploads/.private-applications/${stored.resumeFileId}`)).status,404);
       assert.equal((await fetch(`${base}/applications/${application._id}/resume`)).status,401);
-      assert.equal((await fetch(`${base}/applications/${application._id}/resume`,{headers:{Authorization:`Bearer ${token}`}})).status,200);
+      const downloaded = await fetch(`${base}/applications/${application._id}/resume`,{headers:{Authorization:`Bearer ${token}`}});
+      assert.equal(downloaded.status,200);
+      assert.equal(downloaded.headers.get('cache-control'),'no-store');
+      assert.ok((await downloaded.text()).startsWith('%PDF-'));
+      assert.equal((await fetch(`${base}/applications/${application._id}/resume`,{headers:{Authorization:`Bearer ${regular.idToken}`}})).status,403);
     });
     await t.test('role changes and Firebase-disabled users take effect immediately', async () => {
       await User.updateOne({ firebaseUid: admin.localId }, { $set: { role: 'user' } });
@@ -227,7 +255,6 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       assert.equal((await req('/auth/me', { token: regular.idToken })).status, 401);
     });
   } finally {
-    for (const filename of privateFiles) await fs.unlink(new URL(`../uploads/.private-applications/${filename}`, import.meta.url)).catch(() => {});
     if (uploaded) await fs.unlink(new URL(`..${uploaded}`, import.meta.url)).catch(() => {});
     await Promise.all(uidList.map(uid => firebaseAuth().deleteUser(uid)));
     await new Promise(resolve => server.close(resolve));

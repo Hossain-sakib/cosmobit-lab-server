@@ -55,7 +55,7 @@ export const SalesActivity = createModel('SalesActivity', salesActivityFields, {
 SalesActivity.schema.index({ platform: 1, profile: 1, date: 1 }, { unique: true });
 export const DistributionHistory = createModel('DistributionHistory', distributionFields, { platform: 'Fiverr', division: 'sales' });
 DistributionHistory.schema.index({ month: 1, person: 1, division: 1, platform: 1 }, { unique: true });
-export const CareerApplication = createModel('CareerApplication', applicationFields, { status: 'new' }, { resumeFilename: { type: String, select: false }, resumeAvailable: { type: Boolean, default: false }, submissionKey: { type: String, unique: true, sparse: true, select: false }, jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' } });
+export const CareerApplication = createModel('CareerApplication', applicationFields, { status: 'new' }, { resumeFilename: { type: String, select: false }, resumeFileId: { type: mongoose.Schema.Types.ObjectId, select: false }, resumeAvailable: { type: Boolean, default: false }, submissionKey: { type: String, unique: true, sparse: true, select: false }, jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' } });
 
 CareerApplication.schema.path('createdBy').required(false);
 CareerApplication.schema.path('updatedBy').required(false);
