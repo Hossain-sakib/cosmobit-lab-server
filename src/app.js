@@ -1,3 +1,4 @@
+import chatRouter from './routes/chat.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -39,6 +40,7 @@ export function createApp() {
   app.use('/uploads', express.static(path.resolve(process.env.UPLOADS_DIRECTORY || 'uploads'), { dotfiles: 'deny' }));
   app.get('/api/health', (req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ status: mongoose.connection.readyState === 1 ? 'ok' : 'unavailable', service: 'cosmobit-labs-api' }));
   app.use('/api/auth', authRouter);
+  app.use('/api/chat', chatRouter);
   app.use('/api/posts', postsRouter);
   app.use('/api/jobs', jobsRouter);
   app.use('/api/contact', contactRouter);

@@ -31,12 +31,13 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
     return { status: res.status, data: await res.json() };
   }
   async function signup() {
-    const res = await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${randomUUID()}@example.com`, password: randomUUID(), returnSecureToken: true }) });
+    const password=randomUUID();
+    const res = await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${randomUUID()}@example.com`, password, returnSecureToken: true }) });
     const data = await res.json();
     assert.equal(res.status, 200);
     uidList.push(data.localId);
     assert.equal((await req('/auth/me', { token: data.idToken })).status, 200);
-    return data;
+    return {...data,password};
   }
   try {
     const admin = await signup();
@@ -172,6 +173,7 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       const own = await req(`/management/projects/${project.data.record._id}`, { token: developer.idToken });
       assert.equal(own.status, 200); assert.equal(own.data.record.orderAmount, undefined); assert.equal(own.data.record.totalAfterFiverr, undefined);
       assert.equal((await req('/management/projects', { token: developer.idToken })).data.total, 1);
+      const work=await req('/management/my-work',{token:developer.idToken});assert.equal(work.data.projects.length,1);assert.equal(work.data.projects[0]._id,project.data.record._id);assert.equal(work.data.projects[0].totalAfterFiverr,undefined);
       assert.equal((await req('/management/special-orders', { token: developer.idToken })).status, 403);
       assert.equal((await req('/management/access', { token: developer.idToken })).status, 403);
       assert.equal((await req('/management/applications', { token: developer.idToken })).status, 403);
@@ -191,6 +193,7 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       await req('/management/team-tasks', { token, method: 'POST', body: { title: 'Department work', departmentId: department._id } });
       const privateTask = await req('/management/team-tasks', { token, method: 'POST', body: { title: 'Other personal work', employeeId: outsider._id } });
       assert.equal((await req('/management/team-tasks', { token: worker.idToken })).data.total, 2);
+      assert.equal((await req('/management/my-work',{token:worker.idToken})).data.taskStats.open,2);
       assert.equal((await req(`/management/team-tasks/${privateTask.data.record._id}`, { token: worker.idToken })).status, 404);
       assert.equal((await req(`/management/team-tasks/${assigned.data.record._id}`, { token: worker.idToken, method: 'PATCH', body: { version: 0, status: 'done', employeeComment: 'Finished' } })).status, 200);
       assert.equal((await req(`/management/team-tasks/${assigned.data.record._id}`, { token: worker.idToken, method: 'PATCH', body: { version: 1, endDate: '2026-12-31' } })).status, 403);
@@ -247,6 +250,43 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       assert.equal(downloaded.headers.get('cache-control'),'no-store');
       assert.ok((await downloaded.text()).startsWith('%PDF-'));
       assert.equal((await fetch(`${base}/applications/${application._id}/resume`,{headers:{Authorization:`Bearer ${regular.idToken}`}})).status,403);
+    });
+    await t.test('own profile editing persists fields and cannot alter identity or access', async () => {
+      const response=await req('/auth/profile',{method:'PATCH',token:regular.idToken,body:{displayName:'Profile Test',phone:'01234',jobTitle:'Designer',bio:'A short profile.'}});
+      assert.equal(response.status,200);assert.equal(response.data.user.phone,'01234');
+      assert.equal((await req('/auth/profile',{method:'PATCH',token:regular.idToken,body:{role:'super_admin'}})).status,400);
+      assert.equal((await req('/auth/profile',{method:'PATCH',token:regular.idToken,body:{email:'other@example.com'}})).status,400);
+      const profile=await req('/auth/me',{token:regular.idToken});assert.equal(profile.data.user.role,'user');assert.equal(profile.data.user.bio,'A short profile.');
+      assert.equal(profile.data.user.avatarPublicId,undefined);
+    });
+    await t.test('chat restricts contacts and messages to verified authorized participants and deduplicates sends', async () => {
+      const {ChatThread,ChatMessage}=await import('../src/models/Chat.js');await Promise.all([ChatThread.init(),ChatMessage.init()]);
+      async function verifiedAccount(role='user'){
+        const account=await signup();await firebaseAuth().updateUser(account.localId,{emailVerified:true});
+        await User.updateOne({firebaseUid:account.localId},{$set:{role}});
+        const login=await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:account.email,password:account.password,returnSecureToken:true})});
+        const data=await login.json();assert.equal(login.status,200);await req('/auth/me',{token:data.idToken});
+        return {token:data.idToken,user:await User.findOne({firebaseUid:account.localId})};
+      }
+      assert.equal((await req('/chat/people',{token:regular.idToken})).status,403);
+      const sales=await verifiedAccount('sales_executive'),client=await verifiedAccount(),outsider=await verifiedAccount(),developer=await verifiedAccount('web_developer');
+      const people=await req('/chat/people',{token:client.token});assert.equal(people.status,200);assert.ok(people.data.people.some(p=>p._id===sales.user.id));assert.ok(!people.data.people.some(p=>p._id===developer.user.id));assert.ok(people.data.people.every(p=>p.email===undefined));
+      for(const target of [developer,outsider])assert.equal((await req('/chat/threads',{token:client.token,method:'POST',body:{userId:target.user.id}})).status,403);
+      const created=await req('/chat/threads',{token:client.token,method:'POST',body:{userId:sales.user.id}});assert.equal(created.status,200);const id=created.data.id;
+      assert.equal((await req('/chat/threads',{token:client.token,method:'POST',body:{userId:sales.user.id}})).data.id,id);
+      assert.equal((await req(`/chat/threads/${id}/messages`,{token:outsider.token})).status,404);
+      const clientMessageId=randomUUID();const first=await req(`/chat/threads/${id}/messages`,{token:client.token,method:'POST',body:{text:'Hello, I need a website.',clientMessageId}});assert.equal(first.status,200);
+      const retry=await req(`/chat/threads/${id}/messages`,{token:client.token,method:'POST',body:{text:'Hello, I need a website.',clientMessageId}});assert.equal(retry.data.message._id,first.data.message._id);assert.equal(await ChatMessage.countDocuments({threadId:id}),1);
+      const notifications=await mongoose.model('StudioNotification').find({userId:sales.user._id,eventKey:`chat-message:${first.data.message._id}`});assert.equal(notifications.length,1);assert.ok(!notifications[0].message.includes('Hello'));
+      await req(`/chat/threads/${id}/messages`,{token:sales.token,method:'POST',body:{text:'Let’s discuss your project.',clientMessageId:randomUUID()}});
+      const history=await req(`/chat/threads/${id}/messages`,{token:client.token});assert.equal(history.data.messages.length,2);
+      const read=await fetch(`${base}/chat/threads/${id}/read`,{method:'POST',headers:{Authorization:`Bearer ${client.token}`,'Content-Type':'application/json'},body:'{}'});assert.equal(read.status,204);
+      assert.equal((await ChatThread.findById(id)).readAt.has(client.user.id),true);
+      assert.equal((await req(`/chat/threads/${id}/read`,{token:client.token,method:'POST',headers:{Origin:'https://evil.example'},body:{}})).status,403);
+      assert.equal((await req('/chat/threads',{token:outsider.token})).data.threads.length,0);
+      const internal=await req('/chat/threads',{token:developer.token,method:'POST',body:{userId:sales.user.id}});assert.equal(internal.status,200);assert.equal((await req(`/chat/threads/${internal.data.id}/messages`,{token:client.token})).status,404);
+      await User.updateOne({_id:sales.user._id},{$set:{studioSuspended:true}});
+      assert.equal((await req(`/chat/threads/${id}/messages`,{token:client.token})).status,403);assert.equal((await req('/chat/threads',{token:sales.token})).status,403);
     });
     await t.test('founder bootstrap verifies exact identity and never reapplies a later role change', async () => {
       const { bootstrapFounder } = await import('../src/services/bootstrapFounder.js');

@@ -1,3 +1,4 @@
+import myWorkRouter from './myWork.js';
 import { Router } from 'express';
 import multer from 'multer';
 import mongoose from 'mongoose';
@@ -29,6 +30,7 @@ import { can, requirePermission, ROLE_LABELS, ROLE_PERMISSIONS, ALL_PERMISSIONS,
 import { recordScope, visibleRecord } from '../lib/managementScope.js';
 const router = Router();
 router.use(requireAuth);
+router.use('/my-work',myWorkRouter);
 router.use('/products/:productId/leads', productLeadsRouter);
 router.use('/reports', reportsRouter);
 router.use('/workflows', businessActionsRouter);
@@ -164,7 +166,7 @@ router.patch('/access/:id', requirePermission('users:edit'), async (req,res) => 
 });
 router.get('/summary', async (req,res) => {
   const result = {};
-  for (const [path, config] of Object.entries(managementModules)) if (can(req.user, `${config.permission}:view`)) result[path] = await config.Model.countDocuments({ $and: [{ archived: false }, await recordScope(req.user,config.permission)] });
+  await Promise.all(Object.entries(managementModules).filter(([,config])=>can(req.user, `${config.permission}:view`)).map(async([path,config])=>{result[path]=await config.Model.countDocuments({$and:[{archived:false},await recordScope(req.user,config.permission)]});}));
   if (can(req.user,'projects:view')) result.overdueProjects = await ManagedProject.countDocuments({ $and: [{ archived:false, deliveryLastDate: { $ne:'', $lt:todayInDhaka() }, status: { $not: /^(completed|cancelled|delivered)$/i } }, await recordScope(req.user,'projects')] });
   res.json(result);
 });

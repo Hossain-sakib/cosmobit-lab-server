@@ -82,3 +82,11 @@ The current image stores community uploads under `/app/uploads`. Mount persisten
 ## Netlify
 
 The frontend and backend deploy to a single Netlify site. See [the Netlify deployment guide](docs/NETLIFY.md) for functions, credentials, durable private uploads, schedules, and release instructions.
+
+## Profile and messaging APIs
+
+`PATCH /api/auth/profile` accepts only displayName, username, phone, jobTitle and bio for the authenticated account. `POST /api/auth/avatar` validates and stores one image through the existing image-storage adapter. Neither endpoint accepts email, role or permission changes.
+
+Verified accounts use `/api/chat/people`, `/api/chat/threads`, and `/api/chat/threads/:id/messages`. Clients can initiate only with verified sales or management roles; staff can initiate with verified staff. Existing conversations remain participant-scoped and are checked against current account status on every request. Message submission IDs deduplicate retries. Read state changes through a CSRF-guarded POST to `/api/chat/threads/:id/read`. Notifications contain no private message text. Chat content stays in MongoDB; no external chat provider or new keys are needed.
+
+`GET /api/management/my-work` returns role- and assignment-scoped task counts and selected project/task fields for the simpler dashboard. Summary counts run concurrently; document, spreadsheet and native image libraries load only when their operations are requested.
