@@ -21,7 +21,9 @@ const uidList = [];
 let uploaded;
 test('Firebase, API, CMS, community, and CRM integration', async t => {
   const db = `cosmobit_test_${randomUUID().replaceAll('-', '')}`;
-  await mongoose.connect(`mongodb://127.0.0.1:27017/${db}`);
+  const previousMongoURI=process.env.MONGODB_URI;
+  process.env.MONGODB_URI=`mongodb://127.0.0.1:27017/${db}`;
+  await mongoose.connect(process.env.MONGODB_URI);
   await Promise.all([User, Post, WorkItem, CommunityPost, ManagedProject, SpecialOrder, Product, ProductLead, Department, Employee, TeamTask, SalesActivity, DistributionHistory, CareerApplication].map(Model => Model.init()));
   const server = createApp().listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
@@ -309,6 +311,14 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
         if(oldEmail===undefined)delete process.env.STUDIO_FOUNDER_EMAIL;else process.env.STUDIO_FOUNDER_EMAIL=oldEmail;
       }
     });
+    await t.test('serverless database reconnects across repeated warm connection closures', async () => {
+      const {serverlessDB}=await import('../src/lib/serverlessDb.js');
+      for(let attempt=0;attempt<2;attempt++){
+        await mongoose.disconnect();await serverlessDB();
+        assert.equal(mongoose.connection.readyState,1);
+        assert.ok(await User.exists({firebaseUid:admin.localId}));
+      }
+    });
     await t.test('role changes and Firebase-disabled users take effect immediately', async () => {
       await User.updateOne({ firebaseUid: admin.localId }, { $set: { role: 'user' } });
       assert.equal((await req('/crm/records', { token })).status, 403);
@@ -321,5 +331,6 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
     await new Promise(resolve => server.close(resolve));
     await mongoose.connection.dropDatabase();
     await mongoose.disconnect();
+    if(previousMongoURI===undefined)delete process.env.MONGODB_URI;else process.env.MONGODB_URI=previousMongoURI;
   }
 });

@@ -14,9 +14,10 @@ export async function serverlessDB() {
         serverSelectionTimeoutMS: 10000,
         connectTimeoutMS: 10000,
       })
-      .catch((error) => {
+      .finally(() => {
+        // Cache only an in-flight attempt; a settled promise cannot reconnect
+        // a later warm invocation after its old connection has closed.
         connection = undefined;
-        throw error;
       });
     await connection;
   }

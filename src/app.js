@@ -4,7 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from './lib/rateLimit.js';
 import path from 'node:path';
-import mongoose from 'mongoose';
+import Job from './models/Job.js';
 import authRouter from './routes/auth.js';
 import postsRouter from './routes/posts.js';
 import jobsRouter from './routes/jobs.js';
@@ -38,7 +38,12 @@ export function createApp() {
   app.use(express.json({ limit: '128kb' }));
   app.use('/uploads/private-applications', (req,res) => res.status(404).json({ message: 'Not found' }));
   app.use('/uploads', express.static(path.resolve(process.env.UPLOADS_DIRECTORY || 'uploads'), { dotfiles: 'deny' }));
-  app.get('/api/health', (req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ status: mongoose.connection.readyState === 1 ? 'ok' : 'unavailable', service: 'cosmobit-labs-api' }));
+  app.get('/api/health', async (req,res) => {
+    // Check the connection used by application models, rather than a cached
+    // connection-state flag that can lag across serverless invocations.
+    try { await Job.db.db.command({ping:1});res.json({status:'ok',service:'cosmobit-labs-api'}); }
+    catch { res.status(503).json({status:'unavailable',service:'cosmobit-labs-api'}); }
+  });
   app.use('/api/auth', authRouter);
   app.use('/api/chat', chatRouter);
   app.use('/api/posts', postsRouter);
