@@ -248,6 +248,27 @@ test('Firebase, API, CMS, community, and CRM integration', async t => {
       assert.ok((await downloaded.text()).startsWith('%PDF-'));
       assert.equal((await fetch(`${base}/applications/${application._id}/resume`,{headers:{Authorization:`Bearer ${regular.idToken}`}})).status,403);
     });
+    await t.test('founder bootstrap verifies exact identity and never reapplies a later role change', async () => {
+      const { bootstrapFounder } = await import('../src/services/bootstrapFounder.js');
+      const identity = await firebaseAuth().getUser(regular.localId);
+      const oldUid = process.env.STUDIO_FOUNDER_UID, oldEmail = process.env.STUDIO_FOUNDER_EMAIL;
+      try {
+        process.env.STUDIO_FOUNDER_UID = regular.localId;
+        process.env.STUDIO_FOUNDER_EMAIL = 'mismatch@example.com';
+        await assert.rejects(bootstrapFounder());
+        process.env.STUDIO_FOUNDER_EMAIL = identity.email;
+        await bootstrapFounder();
+        const founder = await User.findOne({firebaseUid:regular.localId}).select('+founderBootstrapAt');
+        assert.equal(founder.role,'super_admin');assert.ok(founder.founderBootstrapAt);
+        assert.equal((await User.findOne({firebaseUid:admin.localId})).role,'admin');
+        await User.updateOne({_id:founder._id},{$set:{role:'user'}});
+        await bootstrapFounder();
+        assert.equal((await User.findById(founder._id)).role,'user');
+      } finally {
+        if(oldUid===undefined)delete process.env.STUDIO_FOUNDER_UID;else process.env.STUDIO_FOUNDER_UID=oldUid;
+        if(oldEmail===undefined)delete process.env.STUDIO_FOUNDER_EMAIL;else process.env.STUDIO_FOUNDER_EMAIL=oldEmail;
+      }
+    });
     await t.test('role changes and Firebase-disabled users take effect immediately', async () => {
       await User.updateOne({ firebaseUid: admin.localId }, { $set: { role: 'user' } });
       assert.equal((await req('/crm/records', { token })).status, 403);

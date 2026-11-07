@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS, MODULES, permissionsFor } from '../lib/permissions.js';
 const userSchema = new mongoose.Schema({
+  founderBootstrapAt: { type: Date, select: false },
   firebaseUid: { type: String, required: true, unique: true, immutable: true },
   username: { type: String, required: true, unique: true, trim: true, lowercase: true, maxlength: 40 },
   email: { type: String, required: true, trim: true, lowercase: true, maxlength: 254 },

@@ -25,3 +25,5 @@ Legacy `admin`, `developer` and `designer` roles remain supported for existing a
 To bootstrap the confirmed founder account, sign in once, verify the exact Firebase UID, then run `npm run admin -- FIREBASE_UID --super` with the intended backend database and Firebase credentials. Do not run this for a guessed account. The founder's sign-in email is still needed to identify the correct UID.
 
 Transactional email stays disabled. These changes do not deploy or publish the environment.
+
+For a serverless host without a shell, the host owner may temporarily set `STUDIO_FOUNDER_UID` and `STUDIO_FOUNDER_EMAIL` to a verified Firebase identity and its exact CRM email. Cold-start initialization verifies that active Firebase identity, updates only the matching existing CRM account, and records a private one-time marker. It does not infer ownership from a display name or create an account. Later role changes are not reapplied by bootstrap. Remove the settings after setup. Email verification is still required by the production Studio access guard.
