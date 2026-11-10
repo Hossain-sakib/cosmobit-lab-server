@@ -20,7 +20,6 @@ router.get("/jobs", async (req, res) => {
   res.json({ jobs });
 });
 
-
 // Contact messages
 router.get("/messages", async (req, res) => {
   const messages = await Message.find().sort({ createdAt: -1 });
@@ -28,7 +27,11 @@ router.get("/messages", async (req, res) => {
 });
 
 router.patch("/messages/:id/read", async (req, res) => {
-  const message = await Message.findByIdAndUpdate(req.params.id, { read: true }, { new: true });
+  const message = await Message.findByIdAndUpdate(
+    req.params.id,
+    { read: true },
+    { new: true },
+  );
   if (!message) return res.status(404).json({ message: "Message not found." });
   res.json({ message });
 });
@@ -47,19 +50,21 @@ router.get("/subscribers", async (req, res) => {
 
 router.delete("/subscribers/:id", async (req, res) => {
   const subscriber = await Subscriber.findByIdAndDelete(req.params.id);
-  if (!subscriber) return res.status(404).json({ message: "Subscriber not found." });
+  if (!subscriber)
+    return res.status(404).json({ message: "Subscriber not found." });
   res.json({ message: "Deleted." });
 });
 
 // Dashboard summary counts
 router.get("/stats", async (req, res) => {
-  const [posts, jobs, messages, unreadMessages, subscribers] = await Promise.all([
-    Post.countDocuments(),
-    Job.countDocuments({ active: true }),
-    Message.countDocuments(),
-    Message.countDocuments({ read: false }),
-    Subscriber.countDocuments(),
-  ]);
+  const [posts, jobs, messages, unreadMessages, subscribers] =
+    await Promise.all([
+      Post.countDocuments(),
+      Job.countDocuments({ active: true }),
+      Message.countDocuments(),
+      Message.countDocuments({ read: false }),
+      Subscriber.countDocuments(),
+    ]);
   res.json({ posts, jobs, messages, unreadMessages, subscribers });
 });
 

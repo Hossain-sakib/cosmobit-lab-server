@@ -1,50 +1,247 @@
-const s = (max = 200, required = false) => ({ type: 'text', max, required });
-const date = { type: 'date' };
-const money = { type: 'number', min: 0, max: 1e10, decimals: 2 };
-const url = { type: 'url', max: 2000 };
+const s = (max = 200, required = false) => ({ type: "text", max, required });
+const date = { type: "date" };
+const money = { type: "number", min: 0, max: 1e10, decimals: 2 };
+const url = { type: "url", max: 2000 };
 export const projectFields = {
-  account: s(), projectName: s(300, true), clientName: s(), status: s(100), assign: s(500),
-  leaderComment: s(10000), clientComment: s(10000), developer: s(500), websiteUrl: url,
-  projectType: s(), deliveryLastDate: date, sheetLink: url, orderedBy: s(),
-  orderAmount: money, bonusAmount: money,
-  feePercent: { type: 'number', min: 0, max: 100, decimals: 2 },
-  address: s(1000), assignedBy: s(),
-  progress: { type: 'number', min: 0, max: 100, decimals: 0 },
-  projectInstructions: s(20000), clientInstructions: s(20000), scopeOfWork: s(20000),
-  orderScreenshotLink: url, conversationScreenshotLink: url, filesLink: url,
-  ownHostingUrl: url, ownHostingUsername: s(), ownHostingCredentialReference: url,
-  clientHostingUrl: url, clientHostingUsername: s(), clientHostingCredentialReference: url,
-  hostingProvider: s(), hostingUsername: s(), hostingCredentialReference: url,
-  themeName: s(), pageBuilder: s(), referenceDesignLink: url, specialPlugins: s(5000),
-  specialRequirements: s(10000), notes: s(10000),
+  account: s(),
+  projectName: s(300, true),
+  clientName: s(),
+  status: s(100),
+  assign: s(500),
+  leaderComment: s(10000),
+  clientComment: s(10000),
+  developer: s(500),
+  websiteUrl: url,
+  projectType: s(),
+  deliveryLastDate: date,
+  sheetLink: url,
+  orderedBy: s(),
+  orderAmount: money,
+  bonusAmount: money,
+  feePercent: { type: "number", min: 0, max: 100, decimals: 2 },
+  address: s(1000),
+  assignedBy: s(),
+  progress: { type: "number", min: 0, max: 100, decimals: 0 },
+  projectInstructions: s(20000),
+  clientInstructions: s(20000),
+  scopeOfWork: s(20000),
+  orderScreenshotLink: url,
+  conversationScreenshotLink: url,
+  filesLink: url,
+  ownHostingUrl: url,
+  ownHostingUsername: s(),
+  ownHostingCredentialReference: url,
+  clientHostingUrl: url,
+  clientHostingUsername: s(),
+  clientHostingCredentialReference: url,
+  hostingProvider: s(),
+  hostingUsername: s(),
+  hostingCredentialReference: url,
+  themeName: s(),
+  pageBuilder: s(),
+  referenceDesignLink: url,
+  specialPlugins: s(5000),
+  specialRequirements: s(10000),
+  notes: s(10000),
 };
 export const pageFields = {
-  name: s(300, true), assigneeUserId:{type:'id'}, oldUrl: url, newUrl: url, assign: s(500), status: s(100), recheck: s(200), remarks: s(5000),
+  name: s(300, true),
+  assigneeUserId: { type: "id" },
+  oldUrl: url,
+  newUrl: url,
+  assign: s(500),
+  status: s(100),
+  recheck: s(200),
+  remarks: s(5000),
 };
 export const revisionFields = { date, message: s(10000, true), author: s() };
 export const specialOrderFields = {
-  profileName: s(200, true), type: s(), clientName: s(), orderType: s(), conversationDocLink: url,
-  orderAmount: money, amountTaka: money, timelineDays: { type: 'number', min: 0, max: 3650, decimals: 0 },
-  keyword: s(500), gigPosition: s(), websiteUrl: url, orderStartDate: date, orderStatus: s(100),
-  postOrderConversationLink: url, conversationStartDate: date, conversationStatus: s(100),
-  deliveryDate: date, deliveryStatus: s(100), reviewText: s(10000),
-  review: s(100), secretReview: s(100), reviewStatus: s(100),
-  paymentStatus: { type: 'enum', values: ['unpaid', 'partial', 'paid', 'refunded', 'not-applicable'] },
+  profileName: s(200, true),
+  type: s(),
+  clientName: s(),
+  orderType: s(),
+  conversationDocLink: url,
+  orderAmount: money,
+  amountTaka: money,
+  timelineDays: { type: "number", min: 0, max: 3650, decimals: 0 },
+  keyword: s(500),
+  gigPosition: s(),
+  websiteUrl: url,
+  orderStartDate: date,
+  orderStatus: s(100),
+  postOrderConversationLink: url,
+  conversationStartDate: date,
+  conversationStatus: s(100),
+  deliveryDate: date,
+  deliveryStatus: s(100),
+  reviewText: s(10000),
+  review: s(100),
+  secretReview: s(100),
+  reviewStatus: s(100),
+  paymentStatus: {
+    type: "enum",
+    values: ["unpaid", "partial", "paid", "refunded", "not-applicable"],
+  },
 };
-export const productFields = { name: s(200, true), category: s(), description: s(10000), websiteUrl: url, price: money, currency: s(3), status: s(100), owner: s(), notes: s(10000) };
-export const leadFields = { clientName: s(200, true), designation: s(), companyName: s(300), city: s(), email: { type: 'email', max: 254 }, contactNumber: s(100), linkedin: url, personalWebsite: url, companyWebsite: url, painPoint: s(5000), offer: s(5000), owner: s(), ownerUserId: { type: 'id' }, status: s(100), nextFollowUp: date, lastContactDate: date, dealAmount: money, notes: s(10000) };
-export const sampleFields = { name: s(300, true), url, category: s(), techStack: s(1000), platformType: s(), medium: { type: 'enum', values: ['website','graphic'] }, collectionType: { type: 'enum', values: ['work-sample','special-order-website'] }, useStatus: { type: 'enum', values: ['unused','used'] }, usedBy: s(), usedDate: date, brief: s(10000), notes: s(10000) };
-export const departmentFields = { name: s(200, true), description: s(5000), leader: s() };
-export const employeeFields = { name: s(200, true), email: { type: 'email', max: 254 }, departmentId: { type: 'id' }, accountUserId: { type: 'id' }, designation: s(), status: { type: 'enum', values: ['active','inactive'] } };
-export const taskFields = { sourceStatus: s(100), title: s(300, true), category: s(), priority: { type: 'enum', values: ['low','normal','high','urgent'] }, status: { type: 'enum', values: ['todo','in-progress','blocked','done'] }, startDate: date, endDate: date, completedDate: date, outputUrl: url, assigneeName: s(500), employeeId: { type: 'id' }, departmentId: { type: 'id' }, comment: s(10000), employeeComment: s(10000) };
-export const salesActivityFields = { date: { ...date, required: true }, platform: { type: 'enum', values: ['Fiverr','Upwork','Direct','Other'] }, profile: s(200, true), morningQuery: { type: 'number', min: 0, max: 1e6, decimals: 0 }, morningQuote: { type: 'number', min: 0, max: 1e6, decimals: 0 }, morningOrder: { type: 'number', min: 0, max: 1e6, decimals: 0 }, morningPass: { type: 'number', min: 0, max: 1e6, decimals: 0 }, eveningQuery: { type: 'number', min: 0, max: 1e6, decimals: 0 }, eveningQuote: { type: 'number', min: 0, max: 1e6, decimals: 0 }, eveningOrder: { type: 'number', min: 0, max: 1e6, decimals: 0 }, eveningPass: { type: 'number', min: 0, max: 1e6, decimals: 0 }, nightQuery: { type: 'number', min: 0, max: 1e6, decimals: 0 }, nightQuote: { type: 'number', min: 0, max: 1e6, decimals: 0 }, nightOrder: { type: 'number', min: 0, max: 1e6, decimals: 0 }, nightPass: { type: 'number', min: 0, max: 1e6, decimals: 0 }, notes: s(5000) };
-export const distributionFields = { month: s(7, true), person: s(200, true), division: { type: 'enum', values: ['sales','operations'] }, platform: { type: 'enum', values: ['Fiverr','Upwork','Direct','Other'] }, amount: money, orders: { type: 'number', min: 0, max: 1e6, decimals: 0 }, notes: s(5000) };
-export const allocationFields = { person: s(200, true), percent: { type: 'number', min: 0, max: 100, decimals: 2 } };
-Object.assign(projectFields, { platform: { type: 'enum', values: ['Fiverr','Upwork','Direct','Other'] }, orderDate: date });
-export const applicationFields = { fullName: s(200, true), email: { type: 'email', max: 254, required: true }, phone: s(100), dateOfBirth: date, gender: s(100), position: s(200, true), experience: s(10000), expectedSalary: s(200), cvLink: url, portfolioLink: url, comment: s(10000), status: { type: 'enum', values: ['new','reviewing','shortlisted','interview','offered','hired','rejected'] }, submittedDate: date };
+export const productFields = {
+  name: s(200, true),
+  category: s(),
+  description: s(10000),
+  websiteUrl: url,
+  price: money,
+  currency: s(3),
+  status: s(100),
+  owner: s(),
+  notes: s(10000),
+};
+export const leadFields = {
+  clientName: s(200, true),
+  designation: s(),
+  companyName: s(300),
+  city: s(),
+  email: { type: "email", max: 254 },
+  contactNumber: s(100),
+  linkedin: url,
+  personalWebsite: url,
+  companyWebsite: url,
+  painPoint: s(5000),
+  offer: s(5000),
+  owner: s(),
+  ownerUserId: { type: "id" },
+  status: s(100),
+  nextFollowUp: date,
+  lastContactDate: date,
+  dealAmount: money,
+  notes: s(10000),
+};
+export const sampleFields = {
+  name: s(300, true),
+  url,
+  category: s(),
+  techStack: s(1000),
+  platformType: s(),
+  medium: { type: "enum", values: ["website", "graphic"] },
+  collectionType: {
+    type: "enum",
+    values: ["work-sample", "special-order-website"],
+  },
+  useStatus: { type: "enum", values: ["unused", "used"] },
+  usedBy: s(),
+  usedDate: date,
+  brief: s(10000),
+  notes: s(10000),
+};
+export const departmentFields = {
+  name: s(200, true),
+  description: s(5000),
+  leader: s(),
+};
+export const employeeFields = {
+  name: s(200, true),
+  email: { type: "email", max: 254 },
+  departmentId: { type: "id" },
+  accountUserId: { type: "id" },
+  designation: s(),
+  status: { type: "enum", values: ["active", "inactive"] },
+};
+export const taskFields = {
+  sourceStatus: s(100),
+  title: s(300, true),
+  category: s(),
+  priority: { type: "enum", values: ["low", "normal", "high", "urgent"] },
+  status: { type: "enum", values: ["todo", "in-progress", "blocked", "done"] },
+  startDate: date,
+  endDate: date,
+  completedDate: date,
+  outputUrl: url,
+  assigneeName: s(500),
+  employeeId: { type: "id" },
+  departmentId: { type: "id" },
+  comment: s(10000),
+  employeeComment: s(10000),
+};
+export const salesActivityFields = {
+  date: { ...date, required: true },
+  platform: { type: "enum", values: ["Fiverr", "Upwork", "Direct", "Other"] },
+  profile: s(200, true),
+  morningQuery: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  morningQuote: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  morningOrder: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  morningPass: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  eveningQuery: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  eveningQuote: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  eveningOrder: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  eveningPass: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  nightQuery: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  nightQuote: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  nightOrder: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  nightPass: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  notes: s(5000),
+};
+export const distributionFields = {
+  month: s(7, true),
+  person: s(200, true),
+  division: { type: "enum", values: ["sales", "operations"] },
+  platform: { type: "enum", values: ["Fiverr", "Upwork", "Direct", "Other"] },
+  amount: money,
+  orders: { type: "number", min: 0, max: 1e6, decimals: 0 },
+  notes: s(5000),
+};
+export const allocationFields = {
+  person: s(200, true),
+  percent: { type: "number", min: 0, max: 100, decimals: 2 },
+};
+Object.assign(projectFields, {
+  platform: { type: "enum", values: ["Fiverr", "Upwork", "Direct", "Other"] },
+  orderDate: date,
+});
+export const applicationFields = {
+  fullName: s(200, true),
+  email: { type: "email", max: 254, required: true },
+  phone: s(100),
+  dateOfBirth: date,
+  gender: s(100),
+  position: s(200, true),
+  experience: s(10000),
+  expectedSalary: s(200),
+  cvLink: url,
+  portfolioLink: url,
+  comment: s(10000),
+  status: {
+    type: "enum",
+    values: [
+      "new",
+      "reviewing",
+      "shortlisted",
+      "interview",
+      "offered",
+      "hired",
+      "rejected",
+    ],
+  },
+  submittedDate: date,
+};
 
-Object.assign(projectFields, { clientId: { type: 'id', resource: 'clients' }, dealId: { type: 'id', resource: 'deals' }, proposalId: { type: 'id', resource: 'proposals' } });
+Object.assign(projectFields, {
+  clientId: { type: "id", resource: "clients" },
+  dealId: { type: "id", resource: "deals" },
+  proposalId: { type: "id", resource: "proposals" },
+});
 
-Object.assign(employeeFields, { phone:s(100), joiningDate:date, salary:money, salaryCurrency:s(3), manager:s(), skills:s(2000), workSchedule:s(1000) });
+Object.assign(employeeFields, {
+  phone: s(100),
+  joiningDate: date,
+  salary: money,
+  salaryCurrency: s(3),
+  manager: s(),
+  skills: s(2000),
+  workSchedule: s(1000),
+});
 
-Object.assign(projectFields, { priority:{type:'enum',values:['low','normal','high','urgent']}, startDate:date, estimatedHours:{type:'number',min:0,max:100000,decimals:2}, repositoryUrl:{type:'url',max:2000}, stagingUrl:{type:'url',max:2000} });
+Object.assign(projectFields, {
+  priority: { type: "enum", values: ["low", "normal", "high", "urgent"] },
+  startDate: date,
+  estimatedHours: { type: "number", min: 0, max: 100000, decimals: 2 },
+  repositoryUrl: { type: "url", max: 2000 },
+  stagingUrl: { type: "url", max: 2000 },
+});

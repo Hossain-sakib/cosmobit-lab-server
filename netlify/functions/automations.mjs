@@ -1,7 +1,7 @@
-import { serverlessDB } from '../../src/lib/serverlessDb.js';
-import { runAutomations } from '../../src/services/automation.js';
+import { serverlessDB } from "../../src/lib/serverlessDb.js";
+import { runAutomations } from "../../src/services/automation.js";
 
-export const config = { schedule: '*/15 * * * *' };
+export const config = { schedule: "*/15 * * * *" };
 export default async () => {
   await serverlessDB();
   await runAutomations();

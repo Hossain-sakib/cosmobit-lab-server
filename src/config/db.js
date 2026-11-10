@@ -5,7 +5,7 @@ export async function connectDB() {
 
   if (!uri) {
     console.error(
-      "MONGODB_URI is not set. Copy server/.env.example to server/.env and fill it in."
+      "MONGODB_URI is not set. Copy server/.env.example to server/.env and fill it in.",
     );
     process.exit(1);
   }

@@ -1,20 +1,64 @@
-import { Router } from 'express';
-import mongoose from 'mongoose';
-import { ManagedProject } from '../models/Management.js';
-import { requireAuth } from '../middleware/auth.js';
-import { can,requirePermission } from '../lib/permissions.js';
-import { recordScope,visibleRecord } from '../lib/managementScope.js';
-import { fail,text } from '../lib/validation.js';
-import { recordNotification } from '../services/automation.js';
-const router=Router();router.use(requireAuth,requirePermission('projects:view'));
-router.patch('/:id/pages/:index/status',async(req,res)=>{
-  if(!mongoose.isObjectIdOrHexString(req.params.id))fail('Invalid project.');const index=Number(req.params.index);if(!Number.isSafeInteger(index)||index<0||index>=500)fail('Invalid page task.');
-  const scope=await recordScope(req.user,'projects');const project=await ManagedProject.findOne({$and:[{_id:req.params.id,archived:false},scope]});if(!project||!project.pages[index])fail('Page task not found.',404);
-  if(!can(req.user,'projects:edit')&&String(project.pages[index].assigneeUserId)!==req.user.id)fail('Only the assigned account may update this page task.',403);
-  if(!['pending','in-progress','done','blocked'].includes(req.body.status))fail('Invalid page task status.');
-  if(req.body.version!==project.__v)fail('This project changed. Reload before saving.',409);
-  const remarks=text(req.body.remarks??project.pages[index].remarks??'','Remarks',{min:0,max:5000});
-  const updated=await ManagedProject.findOneAndUpdate({_id:project._id,__v:project.__v},{$set:{[`pages.${index}.status`]:req.body.status,[`pages.${index}.remarks`]:remarks,updatedBy:req.user.id},$inc:{__v:1},$push:{history:{$each:[{at:new Date(),actor:req.user.id,action:'assigned page task updated',fields:[`pages.${index}.status`,`pages.${index}.remarks`]}],$slice:-100}}},{new:true,runValidators:true});
-  if(!updated)fail('This project changed. Reload before saving.',409);await recordNotification(updated,'projects',project);res.json({record:visibleRecord(updated,req.user,'projects')});
+import { Router } from "express";
+import mongoose from "mongoose";
+import { ManagedProject } from "../models/Management.js";
+import { requireAuth } from "../middleware/auth.js";
+import { can, requirePermission } from "../lib/permissions.js";
+import { recordScope, visibleRecord } from "../lib/managementScope.js";
+import { fail, text } from "../lib/validation.js";
+import { recordNotification } from "../services/automation.js";
+const router = Router();
+router.use(requireAuth, requirePermission("projects:view"));
+router.patch("/:id/pages/:index/status", async (req, res) => {
+  if (!mongoose.isObjectIdOrHexString(req.params.id)) fail("Invalid project.");
+  const index = Number(req.params.index);
+  if (!Number.isSafeInteger(index) || index < 0 || index >= 500)
+    fail("Invalid page task.");
+  const scope = await recordScope(req.user, "projects");
+  const project = await ManagedProject.findOne({
+    $and: [{ _id: req.params.id, archived: false }, scope],
+  });
+  if (!project || !project.pages[index]) fail("Page task not found.", 404);
+  if (
+    !can(req.user, "projects:edit") &&
+    String(project.pages[index].assigneeUserId) !== req.user.id
+  )
+    fail("Only the assigned account may update this page task.", 403);
+  if (!["pending", "in-progress", "done", "blocked"].includes(req.body.status))
+    fail("Invalid page task status.");
+  if (req.body.version !== project.__v)
+    fail("This project changed. Reload before saving.", 409);
+  const remarks = text(
+    req.body.remarks ?? project.pages[index].remarks ?? "",
+    "Remarks",
+    { min: 0, max: 5000 },
+  );
+  const updated = await ManagedProject.findOneAndUpdate(
+    { _id: project._id, __v: project.__v },
+    {
+      $set: {
+        [`pages.${index}.status`]: req.body.status,
+        [`pages.${index}.remarks`]: remarks,
+        updatedBy: req.user.id,
+      },
+      $inc: { __v: 1 },
+      $push: {
+        history: {
+          $each: [
+            {
+              at: new Date(),
+              actor: req.user.id,
+              action: "assigned page task updated",
+              fields: [`pages.${index}.status`, `pages.${index}.remarks`],
+            },
+          ],
+          $slice: -100,
+        },
+      },
+    },
+    { new: true, runValidators: true },
+  );
+  if (!updated) fail("This project changed. Reload before saving.", 409);
+  await recordNotification(updated, "projects", project);
+  res.json({ record: visibleRecord(updated, req.user, "projects") });
 });
 export default router;

@@ -1,70 +1,125 @@
-import chatRouter from './routes/chat.js';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import { rateLimit } from './lib/rateLimit.js';
-import path from 'node:path';
-import Job from './models/Job.js';
-import authRouter from './routes/auth.js';
-import postsRouter from './routes/posts.js';
-import jobsRouter from './routes/jobs.js';
-import contactRouter from './routes/contact.js';
-import newsletterRouter from './routes/newsletter.js';
-import adminRouter from './routes/admin.js';
-import communityRouter from './routes/community.js';
-import crmRouter from './routes/crm.js';
-import managementRouter from './routes/management.js';
-import websiteRouter from './routes/website.js';
-import { publicDocuments } from './routes/documentShares.js';
-import applicationsRouter from './routes/applications.js';
+import chatRouter from "./routes/chat.js";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import { rateLimit } from "./lib/rateLimit.js";
+import path from "node:path";
+import Job from "./models/Job.js";
+import authRouter from "./routes/auth.js";
+import postsRouter from "./routes/posts.js";
+import jobsRouter from "./routes/jobs.js";
+import contactRouter from "./routes/contact.js";
+import newsletterRouter from "./routes/newsletter.js";
+import adminRouter from "./routes/admin.js";
+import communityRouter from "./routes/community.js";
+import crmRouter from "./routes/crm.js";
+import managementRouter from "./routes/management.js";
+import websiteRouter from "./routes/website.js";
+import { publicDocuments } from "./routes/documentShares.js";
+import applicationsRouter from "./routes/applications.js";
 export function createApp() {
   const app = express();
-  const origins = (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(x => x.trim());
-  if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY.split(',').map(x => x.trim()));
-  app.disable('x-powered-by');
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  const origins = (process.env.CLIENT_URL || "http://localhost:5173")
+    .split(",")
+    .map((x) => x.trim());
+  if (process.env.TRUST_PROXY)
+    app.set(
+      "trust proxy",
+      process.env.TRUST_PROXY.split(",").map((x) => x.trim()),
+    );
+  app.disable("x-powered-by");
+  app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(cors({ origin: origins, credentials: true }));
-  app.use('/api', rateLimit({ windowMs: 60000, limit: 300, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Too many requests. Please try again later.' } }, 'api'));
-  app.use('/api', (req, res, next) => {
-    res.set('Cache-Control', 'no-store');
-    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
-    if (req.headers.origin && !origins.includes(req.headers.origin)) return res.status(403).json({ message: 'Origin not allowed.' });
-    if (req.is('multipart/form-data')) {
-      if (req.headers['x-requested-with'] !== 'CosmoBit') return res.status(403).json({ message: 'Missing request verification header.' });
-    } else if (!(req.method === 'DELETE' && !req.headers['content-length'] && !req.headers['transfer-encoding']) && !req.is('application/json')) return res.status(415).json({ message: 'Content-Type must be application/json.' });
+  app.use(
+    "/api",
+    rateLimit(
+      {
+        windowMs: 60000,
+        limit: 300,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        message: { message: "Too many requests. Please try again later." },
+      },
+      "api",
+    ),
+  );
+  app.use("/api", (req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+    if (req.headers.origin && !origins.includes(req.headers.origin))
+      return res.status(403).json({ message: "Origin not allowed." });
+    if (req.is("multipart/form-data")) {
+      if (req.headers["x-requested-with"] !== "CosmoBit")
+        return res
+          .status(403)
+          .json({ message: "Missing request verification header." });
+    } else if (
+      !(
+        req.method === "DELETE" &&
+        !req.headers["content-length"] &&
+        !req.headers["transfer-encoding"]
+      ) &&
+      !req.is("application/json")
+    )
+      return res
+        .status(415)
+        .json({ message: "Content-Type must be application/json." });
     next();
   });
-  app.use('/api/management', express.json({ limit: '2mb' }));
-  app.use(express.json({ limit: '128kb' }));
-  app.use('/uploads/private-applications', (req,res) => res.status(404).json({ message: 'Not found' }));
-  app.use('/uploads', express.static(path.resolve(process.env.UPLOADS_DIRECTORY || 'uploads'), { dotfiles: 'deny' }));
-  app.get('/api/health', async (req,res) => {
+  app.use("/api/management", express.json({ limit: "2mb" }));
+  app.use(express.json({ limit: "128kb" }));
+  app.use("/uploads/private-applications", (req, res) =>
+    res.status(404).json({ message: "Not found" }),
+  );
+  app.use(
+    "/uploads",
+    express.static(path.resolve(process.env.UPLOADS_DIRECTORY || "uploads"), {
+      dotfiles: "deny",
+    }),
+  );
+  app.get("/api/health", async (req, res) => {
     // Check the connection used by application models, rather than a cached
     // connection-state flag that can lag across serverless invocations.
-    try { await Job.db.db.command({ping:1});res.json({status:'ok',service:'cosmobit-labs-api'}); }
-    catch { res.status(503).json({status:'unavailable',service:'cosmobit-labs-api'}); }
+    try {
+      await Job.db.db.command({ ping: 1 });
+      res.json({ status: "ok", service: "cosmobit-labs-api" });
+    } catch {
+      res
+        .status(503)
+        .json({ status: "unavailable", service: "cosmobit-labs-api" });
+    }
   });
-  app.use('/api/auth', authRouter);
-  app.use('/api/chat', chatRouter);
-  app.use('/api/posts', postsRouter);
-  app.use('/api/jobs', jobsRouter);
-  app.use('/api/contact', contactRouter);
-  app.use('/api/newsletter', newsletterRouter);
-  app.use('/api/admin', adminRouter);
-  app.use('/api/community', communityRouter);
-  app.use('/api/crm', crmRouter);
-  app.use('/api/management', managementRouter);
-  app.use('/api/applications', applicationsRouter);
-  app.use('/api/documents', publicDocuments);
-  app.use('/api', websiteRouter);
-  app.use((req, res) => res.status(404).json({ message: 'Not found' }));
+  app.use("/api/auth", authRouter);
+  app.use("/api/chat", chatRouter);
+  app.use("/api/posts", postsRouter);
+  app.use("/api/jobs", jobsRouter);
+  app.use("/api/contact", contactRouter);
+  app.use("/api/newsletter", newsletterRouter);
+  app.use("/api/admin", adminRouter);
+  app.use("/api/community", communityRouter);
+  app.use("/api/crm", crmRouter);
+  app.use("/api/management", managementRouter);
+  app.use("/api/applications", applicationsRouter);
+  app.use("/api/documents", publicDocuments);
+  app.use("/api", websiteRouter);
+  app.use((req, res) => res.status(404).json({ message: "Not found" }));
   app.use((err, req, res, next) => {
     if (res.headersSent) return next(err);
-    if (err.code === 11000) return res.status(409).json({ message: 'That record already exists.' });
-    if (err.name === 'CastError' || err.name === 'ValidationError') return res.status(400).json({ message: 'Invalid input.' });
+    if (err.code === 11000)
+      return res.status(409).json({ message: "That record already exists." });
+    if (err.name === "CastError" || err.name === "ValidationError")
+      return res.status(400).json({ message: "Invalid input." });
     const status = err.status >= 400 && err.status < 500 ? err.status : 500;
-    if (status === 500) console.error('Request failed:', process.env.NODE_ENV === 'test' ? err.stack : err.name);
-    res.status(status).json({ message: status === 500 ? 'Unexpected server error.' : err.message });
+    if (status === 500)
+      console.error(
+        "Request failed:",
+        process.env.NODE_ENV === "test" ? err.stack : err.name,
+      );
+    res
+      .status(status)
+      .json({
+        message: status === 500 ? "Unexpected server error." : err.message,
+      });
   });
   return app;
 }
