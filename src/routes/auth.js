@@ -39,7 +39,7 @@ router.post("/register", requireAuth, async (req, res) => {
 const sessionOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  sameSite: "lax",
   path: "/",
 });
 router.post("/session", requireAuth, async (req, res) => {

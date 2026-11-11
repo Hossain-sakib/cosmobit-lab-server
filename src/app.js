@@ -46,7 +46,10 @@ export function createApp() {
   app.use("/api", (req, res, next) => {
     res.set("Cache-Control", "no-store");
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
-    if (req.headers.origin && !origins.includes(req.headers.origin))
+    if (
+      req.headers["sec-fetch-site"] === "cross-site" ||
+      (req.headers.origin && !origins.includes(req.headers.origin))
+    )
       return res.status(403).json({ message: "Origin not allowed." });
     if (req.is("multipart/form-data")) {
       if (req.headers["x-requested-with"] !== "CosmoBit")
@@ -115,11 +118,9 @@ export function createApp() {
         "Request failed:",
         process.env.NODE_ENV === "test" ? err.stack : err.name,
       );
-    res
-      .status(status)
-      .json({
-        message: status === 500 ? "Unexpected server error." : err.message,
-      });
+    res.status(status).json({
+      message: status === 500 ? "Unexpected server error." : err.message,
+    });
   });
   return app;
 }

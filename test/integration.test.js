@@ -104,6 +104,91 @@ test("Firebase, API, CMS, community, and CRM integration", async (t) => {
       { $set: { role: "admin" } },
     );
     await t.test(
+      "suspension also blocks legacy administration and writes",
+      async () => {
+        await User.updateOne(
+          { firebaseUid: admin.localId },
+          { $set: { studioSuspended: true } },
+        );
+        try {
+          for (const path of [
+            "/admin/stats",
+            "/admin/messages",
+            "/crm/records",
+          ])
+            assert.equal((await req(path, { token })).status, 403);
+          assert.equal(
+            (
+              await req("/posts", {
+                token,
+                method: "POST",
+                body: { title: "Blocked" },
+              })
+            ).status,
+            403,
+          );
+        } finally {
+          await User.updateOne(
+            { firebaseUid: admin.localId },
+            { $set: { studioSuspended: false } },
+          );
+        }
+        assert.equal((await req("/admin/stats", { token })).status, 200);
+      },
+    );
+    await t.test(
+      "cross-site writes are rejected even without an Origin header",
+      async () => {
+        assert.equal(
+          (
+            await req("/auth/profile", {
+              token,
+              method: "PATCH",
+              body: { displayName: "Blocked" },
+              headers: { "Sec-Fetch-Site": "cross-site" },
+            })
+          ).status,
+          403,
+        );
+        assert.equal(
+          (
+            await req("/auth/profile", {
+              token,
+              method: "PATCH",
+              body: { displayName: "Allowed" },
+              headers: {
+                "Sec-Fetch-Site": "same-origin",
+                Origin: "http://localhost:5173",
+              },
+            })
+          ).status,
+          200,
+        );
+      },
+    );
+    await t.test(
+      "session cookies restrict script and cross-site access",
+      async () => {
+        const response = await fetch(`${base}/auth/session`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${regular.idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+        });
+        assert.equal(response.status, 200);
+        const cookie = response.headers.get("set-cookie");
+        assert.match(cookie, /HttpOnly/i);
+        assert.match(cookie, /SameSite=Lax/i);
+        const session = cookie.split(";")[0];
+        assert.equal(
+          (await req("/auth/me", { headers: { Cookie: session } })).status,
+          200,
+        );
+      },
+    );
+    await t.test(
       "readiness, authentication, profile validation, and authorization",
       async () => {
         assert.equal((await req("/health")).status, 200);

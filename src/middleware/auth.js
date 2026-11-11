@@ -69,7 +69,10 @@ export async function requireAuth(req, res, next) {
   next();
 }
 export function requireAdmin(req, res, next) {
-  if (!["admin", "super_admin"].includes(req.user?.role))
+  if (
+    req.user?.studioSuspended ||
+    !["admin", "super_admin"].includes(req.user?.role)
+  )
     return res.status(403).json({ message: "Admin access required." });
   next();
 }
