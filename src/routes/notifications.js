@@ -6,16 +6,22 @@ import { requirePermission } from "../lib/permissions.js";
 import { fail } from "../lib/validation.js";
 import User from "../models/User.js";
 import { smtpReady } from "../services/automation.js";
+import { visibleNotifications } from "../services/notificationVisibility.js";
 const router = Router();
 router.use(requireAuth);
 router.get("/", requirePermission("notifications:view"), async (req, res) => {
-  const [records, unread] = await Promise.all([
-    Notification.find({ userId: req.user.id })
-      .sort({ createdAt: -1 })
-      .limit(100),
-    Notification.countDocuments({ userId: req.user.id, readAt: null }),
-  ]);
-  res.json({ records, unread, emailEnabled: !!req.user.notificationEmails });
+  const recent = await Notification.find({ userId: req.user.id })
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
+  const records = await visibleNotifications(req.user, recent);
+  const unread = records.filter((record) => !record.readAt).length;
+  res.json({
+    records,
+    unread,
+    recentLimit: 100,
+    emailEnabled: !!req.user.notificationEmails,
+  });
 });
 router.patch(
   "/:id/read",
@@ -29,7 +35,7 @@ router.patch(
       { new: true },
     );
     if (!record) fail("Notification not found.", 404);
-    res.json({ record });
+    res.json({ record: { _id: record._id, readAt: record.readAt } });
   },
 );
 router.post(

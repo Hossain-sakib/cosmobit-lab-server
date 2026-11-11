@@ -224,6 +224,73 @@ test("Firebase, API, CMS, community, and CRM integration", async (t) => {
       },
     );
     await t.test(
+      "notifications are personal and stop exposing records after access is removed",
+      async () => {
+        const watcher = await signup();
+        await User.updateOne(
+          { firebaseUid: watcher.localId },
+          { $set: { role: "web_developer" } },
+        );
+        const account = await User.findOne({ firebaseUid: watcher.localId });
+        const adminAccount = await User.findOne({ firebaseUid: admin.localId });
+        const project = await ManagedProject.create({
+          projectName: "Scoped notification test",
+          memberUserIds: [account._id],
+          createdBy: adminAccount._id,
+          updatedBy: adminAccount._id,
+        });
+        const Notification = mongoose.model("StudioNotification");
+        const own = await Notification.create({
+          userId: account._id,
+          eventKey: "scope-check",
+          title: "Private project update",
+          message: "Assigned project details",
+          link: `/studio/projects/${project._id}`,
+        });
+        const other = await Notification.create({
+          userId: adminAccount._id,
+          eventKey: "other-owner",
+          title: "Another account",
+          message: "Private",
+          link: `/studio/projects/${project._id}`,
+        });
+        const feed = await req("/management/notifications", {
+          token: watcher.idToken,
+        });
+        assert.equal(feed.status, 200);
+        assert.equal(feed.data.unread, 1);
+        assert.equal(feed.data.records[0]._id, String(own._id));
+        assert.equal(
+          (
+            await req(`/management/notifications/${other._id}/read`, {
+              method: "PATCH",
+              token: watcher.idToken,
+              body: {},
+            })
+          ).status,
+          404,
+        );
+        const read = await req(`/management/notifications/${own._id}/read`, {
+          method: "PATCH",
+          token: watcher.idToken,
+          body: {},
+        });
+        assert.equal(read.status, 200);
+        assert.ok(read.data.record.readAt);
+        assert.equal(read.data.record.title, undefined);
+        await ManagedProject.updateOne(
+          { _id: project._id },
+          { $set: { memberUserIds: [] } },
+        );
+        const revoked = await req("/management/notifications", {
+          token: watcher.idToken,
+        });
+        assert.equal(revoked.status, 200);
+        assert.equal(revoked.data.records.length, 0);
+        assert.equal(revoked.data.unread, 0);
+      },
+    );
+    await t.test(
       "Netlify adapter routes direct and rewritten API requests",
       async () => {
         const { handler } = await import("../netlify/functions/api.mjs");
@@ -1331,12 +1398,10 @@ test("Firebase, API, CMS, community, and CRM integration", async (t) => {
         });
         assert.equal(retry.data.message._id, first.data.message._id);
         assert.equal(await ChatMessage.countDocuments({ threadId: id }), 1);
-        const notifications = await mongoose
-          .model("StudioNotification")
-          .find({
-            userId: sales.user._id,
-            eventKey: `chat-message:${first.data.message._id}`,
-          });
+        const notifications = await mongoose.model("StudioNotification").find({
+          userId: sales.user._id,
+          eventKey: `chat-message:${first.data.message._id}`,
+        });
         assert.equal(notifications.length, 1);
         assert.ok(!notifications[0].message.includes("Hello"));
         await req(`/chat/threads/${id}/messages`, {
