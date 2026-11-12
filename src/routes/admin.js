@@ -1,3 +1,5 @@
+import { publishContentPack } from "../services/publishContent.js";
+import { fail } from "../lib/validation.js";
 import { Router } from "express";
 import Message from "../models/Message.js";
 import Subscriber from "../models/Subscriber.js";
@@ -11,7 +13,7 @@ router.use(requireAuth, requireAdmin);
 // Full post/job listings for the dashboard (includes drafts/inactive ones
 // that the public site intentionally hides).
 router.get("/posts", async (req, res) => {
-  const posts = await Post.find().sort({ createdAt: -1 });
+  const posts = await Post.find().sort({ publishedAt: -1, createdAt: -1 });
   res.json({ posts });
 });
 
@@ -66,6 +68,14 @@ router.get("/stats", async (req, res) => {
       Subscriber.countDocuments(),
     ]);
   res.json({ posts, jobs, messages, unreadMessages, subscribers });
+});
+
+// Explicit maintenance operation; never runs automatically during deployment.
+router.post("/content-pack", async (req, res) => {
+  if (req.user.role !== "super_admin") fail("Founder access required.", 403);
+  if (req.body?.version !== "editorial-community-v1")
+    fail("Choose a supported content pack.");
+  res.json(await publishContentPack({ apply: true }));
 });
 
 export default router;

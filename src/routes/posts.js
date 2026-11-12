@@ -20,7 +20,10 @@ async function uniqueSlug(title, id) {
 }
 router.get("/", async (req, res) =>
   res.json({
-    posts: await Post.find({ published: true }).sort({ createdAt: -1 }),
+    posts: await Post.find({ published: true }).sort({
+      publishedAt: -1,
+      createdAt: -1,
+    }),
   }),
 );
 router.get("/:slug", async (req, res) => {

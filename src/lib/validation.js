@@ -27,7 +27,17 @@ export function fields(body, specs, partial = false, allowEmpty = false) {
   const result = {};
   for (const [key, spec] of Object.entries(specs)) {
     if (body[key] === undefined && (partial || spec.optional)) continue;
-    if (spec.boolean) {
+    if (spec.date) {
+      const value = text(body[key], key, { max: 10 });
+      const date = new Date(`${value}T00:00:00.000Z`);
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+        Number.isNaN(date.getTime()) ||
+        date.toISOString().slice(0, 10) !== value
+      )
+        fail(`${key} must be a valid date (YYYY-MM-DD).`);
+      result[key] = date;
+    } else if (spec.boolean) {
       if (typeof body[key] !== "boolean") fail(`${key} must be a boolean.`);
       result[key] = body[key];
     } else {
@@ -48,6 +58,9 @@ export const postFields = {
   author: { max: 100, optional: true },
   coverVariant: { values: ["blue", "purple"], optional: true },
   published: { boolean: true, optional: true },
+  publishedAt: { date: true, optional: true },
+  seoTitle: { min: 0, max: 70, optional: true },
+  seoDescription: { min: 0, max: 170, optional: true },
 };
 export const jobFields = {
   title: { max: 200 },

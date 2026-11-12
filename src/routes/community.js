@@ -41,6 +41,7 @@ router.post("/posts", requireAuth, handleUpload, async (req, res) => {
       authorId: req.user.id,
       authorUsername: req.user.username,
       authorDisplayName: req.user.displayName,
+      isDemo: !!req.user.isDemo,
       content,
       ...(image || {}),
     });
@@ -56,7 +57,8 @@ router.delete("/posts/:id", requireAuth, async (req, res) => {
   if (!post) fail("Post not found.", 404);
   if (
     String(post.authorId) !== req.user.id &&
-    !["admin", "super_admin"].includes(req.user.role)
+    (req.user.studioSuspended ||
+      !["admin", "super_admin"].includes(req.user.role))
   )
     fail("You can only delete your own posts.", 403);
   await post.deleteOne();
@@ -100,6 +102,7 @@ router.post("/posts/:id/comments", requireAuth, async (req, res) => {
           authorId: req.user.id,
           authorUsername: req.user.username,
           authorDisplayName: req.user.displayName,
+          isDemo: !!req.user.isDemo,
           text: value,
         },
       },
@@ -115,7 +118,8 @@ router.delete(
   async (req, res) => {
     const match = {
       _id: req.params.commentId,
-      ...(!["admin", "super_admin"].includes(req.user.role)
+      ...(req.user.studioSuspended ||
+      !["admin", "super_admin"].includes(req.user.role)
         ? { authorId: req.user.id }
         : {}),
     };

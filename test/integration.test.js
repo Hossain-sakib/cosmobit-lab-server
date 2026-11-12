@@ -189,6 +189,59 @@ test("Firebase, API, CMS, community, and CRM integration", async (t) => {
       },
     );
     await t.test(
+      "blog publication dates and SEO metadata are validated separately from creation time",
+      async () => {
+        const body = {
+          title: "Publication metadata test",
+          excerpt: "A useful article excerpt.",
+          content: "Article content for validation.",
+          publishedAt: "2026-11-01",
+          seoTitle: "A focused search title",
+          seoDescription: "A clear search description.",
+        };
+        assert.equal(
+          (
+            await req("/posts", {
+              token,
+              method: "POST",
+              body: { ...body, publishedAt: "2026-02-31" },
+            })
+          ).status,
+          400,
+        );
+        assert.equal(
+          (
+            await req("/posts", {
+              token,
+              method: "POST",
+              body: { ...body, seoTitle: "x".repeat(71) },
+            })
+          ).status,
+          400,
+        );
+        const result = await req("/posts", { token, method: "POST", body });
+        assert.equal(result.status, 201);
+        try {
+          assert.equal(
+            result.data.post.publishedAt,
+            "2026-11-01T00:00:00.000Z",
+          );
+          assert.equal(result.data.post.seoTitle, body.seoTitle);
+          assert.ok(
+            new Date(result.data.post.createdAt).getTime() >=
+              Date.now() - 60000,
+          );
+          const published = await req(`/posts/${result.data.post.slug}`);
+          assert.equal(published.data.post.seoDescription, body.seoDescription);
+        } finally {
+          await req(`/posts/${result.data.post._id}`, {
+            token,
+            method: "DELETE",
+          });
+        }
+      },
+    );
+    await t.test(
       "readiness, authentication, profile validation, and authorization",
       async () => {
         assert.equal((await req("/health")).status, 200);
@@ -1620,6 +1673,76 @@ test("Firebase, API, CMS, community, and CRM integration", async (t) => {
         assert.equal(
           (await req("/auth/me", { token: regular.idToken })).status,
           401,
+        );
+      },
+    );
+    await t.test(
+      "reviewed content publication requires founder access and preserves existing records",
+      async () => {
+        const editor = await signup();
+        assert.equal(
+          (
+            await req("/admin/content-pack", {
+              token: editor.idToken,
+              method: "POST",
+              body: { version: "editorial-community-v1" },
+            })
+          ).status,
+          403,
+        );
+        await User.updateOne(
+          { firebaseUid: editor.localId },
+          { $set: { role: "admin" } },
+        );
+        assert.equal(
+          (
+            await req("/admin/content-pack", {
+              token: editor.idToken,
+              method: "POST",
+              body: { version: "editorial-community-v1" },
+            })
+          ).status,
+          403,
+        );
+        await User.updateOne(
+          { firebaseUid: editor.localId },
+          { $set: { role: "super_admin" } },
+        );
+        const result = await req("/admin/content-pack", {
+          token: editor.idToken,
+          method: "POST",
+          body: { version: "editorial-community-v1" },
+        });
+        assert.equal(result.status, 200);
+        assert.equal(result.data.articlesAdded, 4);
+        assert.equal(result.data.profilesAdded, 4);
+        assert.equal(result.data.discussionsAdded, 5);
+        const again = await req("/admin/content-pack", {
+          token: editor.idToken,
+          method: "POST",
+          body: { version: "editorial-community-v1" },
+        });
+        assert.equal(again.data.articlesAdded, 0);
+        assert.equal(again.data.discussionsAdded, 0);
+        const profiles = await User.find({ isDemo: true });
+        assert.equal(profiles.length, 4);
+        assert.ok(
+          profiles.every(
+            (person) =>
+              person.role === "user" &&
+              person.studioSuspended &&
+              !person.emailVerified,
+          ),
+        );
+        const posts = await CommunityPost.find({ isDemo: true });
+        assert.equal(posts.length, 5);
+        assert.ok(
+          posts.every(
+            (post) =>
+              post.likes.length === 0 &&
+              post.shareCount === 0 &&
+              post.comments.every((comment) => comment.isDemo),
+          ),
         );
       },
     );

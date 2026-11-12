@@ -1,0 +1,105 @@
+{
+  "people": [
+    {
+      "id": "ayesha",
+      "name": "Ayesha Rahman",
+      "username": "demo_ayesha",
+      "headline": "Demo product designer"
+    },
+    {
+      "id": "farhan",
+      "name": "Farhan Ahmed",
+      "username": "demo_farhan",
+      "headline": "Demo web developer"
+    },
+    {
+      "id": "nabila",
+      "name": "Nabila Chowdhury",
+      "username": "demo_nabila",
+      "headline": "Demo project coordinator"
+    },
+    {
+      "id": "rafi",
+      "name": "Rafi Hasan",
+      "username": "demo_rafi",
+      "headline": "Demo business analyst"
+    }
+  ],
+  "posts": [
+    {
+      "key": "clear-project-brief",
+      "author": "nabila",
+      "content": "What is the one question you always ask before starting a client website?\n\nMy starting point is: what should a visitor be able to do more easily after this project? It helps turn a page list into a useful journey. I would also ask who owns the content and who can approve the final scope.\n\nWhich question would you add to that first conversation?",
+      "comments": [
+        {
+          "author": "ayesha",
+          "text": "I would ask what visitors find confusing today. Looking at an existing support question can be more useful than asking for a favourite design style."
+        },
+        {
+          "author": "rafi",
+          "text": "I would add a handoff question: who receives an enquiry, and what information do they need to respond? A good form still needs a clear owner."
+        }
+      ]
+    },
+    {
+      "key": "mobile-checklist",
+      "author": "farhan",
+      "content": "A small mobile QA checklist for the end of a feature:\n\n\u2022 Open the page at a narrow width, not just a scaled desktop view.\n\u2022 Check the logo, menu, keyboard focus and long text.\n\u2022 Expand dropdowns near the bottom of the screen.\n\u2022 Try a slow image request and a failed request.\n\u2022 Confirm that primary actions are easy to tap.\n\nWhat would you put on a checklist that a busy team could actually use?",
+      "comments": [
+        {
+          "author": "nabila",
+          "text": "Rotate the device while a menu or form is open. It is a quick way to spot assumptions about a fixed screen height."
+        },
+        {
+          "author": "ayesha",
+          "text": "Test with a longer name and a real sentence in the fields. Placeholder text rarely exposes the wrapping problems."
+        }
+      ]
+    },
+    {
+      "key": "design-feedback",
+      "author": "ayesha",
+      "content": "Useful design feedback describes an observation before suggesting a solution.\n\nInstead of \u201cmake the button bigger,\u201d try \u201cI missed the next action after reading the pricing details.\u201d The designer can then investigate size, contrast, placement and the surrounding content.\n\nHow do you collect feedback so that a team gets one clear set of decisions rather than several conflicting messages?",
+      "comments": [
+        {
+          "author": "nabila",
+          "text": "Separate observations, questions and final decisions. Also name one person who consolidates feedback before the next revision."
+        },
+        {
+          "author": "farhan",
+          "text": "A screenshot with the viewport size helps. I would also ask which task the person was trying to complete when they noticed the issue."
+        }
+      ]
+    },
+    {
+      "key": "performance-budget",
+      "author": "farhan",
+      "content": "If a homepage feels slow, I would inspect what the first screen downloads before removing all of the illustrations.\n\nThe useful questions are whether image sizes match their placements, whether below-the-fold media loads lazily, and whether unrelated dashboard code is part of the first page. A preloader should not hide content that is already usable.\n\nWhat is your first performance check when someone reports that a page feels slow?",
+      "comments": [
+        {
+          "author": "ayesha",
+          "text": "I watch for layout shifts while images and fonts load. A quick download can still feel uncomfortable when the page keeps moving."
+        },
+        {
+          "author": "rafi",
+          "text": "I would reproduce the actual journey on a slower connection. A report score helps, but it should connect to something the visitor needs to do."
+        }
+      ]
+    },
+    {
+      "key": "sales-delivery-handoff",
+      "author": "rafi",
+      "content": "A sales-to-delivery handoff should give the project team context without making them search through every conversation.\n\nI would include the agreed outcome, accepted scope, responsible people, target dates and links to the proposal and client record. Requests that are not part of the scope need a visible decision rather than an informal promise.\n\nWhat information should be required before an opportunity becomes a delivery project?",
+      "comments": [
+        {
+          "author": "nabila",
+          "text": "Acceptance criteria and a named approver. Those two details make reviews much easier to plan."
+        },
+        {
+          "author": "farhan",
+          "text": "List the integrations and the person who can arrange access. Keep the actual credentials in the appropriate secret store, not in project comments."
+        }
+      ]
+    }
+  ]
+}

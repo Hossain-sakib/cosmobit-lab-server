@@ -16,6 +16,9 @@ const postSchema = new mongoose.Schema(
     author: { type: String, default: "CosmoBit Labs" },
     coverVariant: { type: String, default: "blue" }, // used to pick a gradient/illustration client-side
     published: { type: Boolean, default: true },
+    publishedAt: { type: Date, default: Date.now },
+    seoTitle: { type: String, trim: true, maxlength: 70 },
+    seoDescription: { type: String, trim: true, maxlength: 170 },
   },
   { timestamps: true },
 );

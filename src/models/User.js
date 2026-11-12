@@ -30,6 +30,7 @@ const userSchema = new mongoose.Schema(
       maxlength: 254,
     },
     studioSuspended: { type: Boolean, default: false },
+    isDemo: { type: Boolean, default: false },
     notificationEmails: { type: Boolean, default: false },
     emailVerified: { type: Boolean, default: false },
     phone: { type: String, maxlength: 40, default: "" },
