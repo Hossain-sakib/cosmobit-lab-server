@@ -1563,6 +1563,17 @@ test("Firebase, API, CMS, community, and CRM integration", async (t) => {
           body: "{}",
         });
         assert.equal(read.status, 204);
+        const receipt = await req(`/chat/threads/${id}/messages`, {
+          token: sales.token,
+        });
+        assert.ok(receipt.data.peerReadAt);
+        const listReceipt = await req("/chat/threads", { token: sales.token });
+        assert.equal(
+          listReceipt.data.threads.find((thread) => thread.id === id)
+            .peerReadAt,
+          receipt.data.peerReadAt,
+        );
+
         assert.equal(
           (await ChatThread.findById(id)).readAt.has(client.user.id),
           true,

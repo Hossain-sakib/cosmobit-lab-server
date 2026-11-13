@@ -93,6 +93,9 @@ router.get("/threads", async (req, res) => {
       lastMessage: t.lastMessage,
       lastMessageAt: t.lastMessageAt,
       readAt: t.readAt.get(req.user.id),
+      peerReadAt: t.readAt.get(
+        t.participants.find((person) => person.id !== req.user.id)?.id,
+      ),
       people: t.participants.map((p) => ({
         id: p.id,
         displayName: p.displayName,
@@ -146,7 +149,14 @@ router.get("/threads/:id/messages", async (req, res) => {
     .sort({ createdAt: -1, _id: -1 })
     .limit(50)
     .select("senderId text createdAt");
-  res.json({ messages: records.reverse(), hasMore: records.length === 50 });
+  res.json({
+    messages: records.reverse(),
+    hasMore: records.length === 50,
+    peerReadAt:
+      thread.readAt.get(
+        String(thread.participants.find((id) => String(id) !== req.user.id)),
+      ) || null,
+  });
 });
 router.post("/threads/:id/read", async (req, res) => {
   const thread = await access(req);
